@@ -372,18 +372,17 @@
       </div>
       
       <div class="form-group">
-        <label for="input-live-url">Google Apps Script Web App URL</label>
-        <input type="text" id="input-live-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec">
-        <p class="help-text">
-          วาง URL ที่ได้จากการ Deploy Apps Script เป็น Web App (สิทธิ์เข้าถึง: Anyone) เพื่อดึงข้อมูลสดตรงจากชีตของคุณ
+        <label for="input-live-url">ลิงก์ Google Sheets หรือ Web App URL</label>
+        <input type="text" id="input-live-url" class="form-input" placeholder="https://docs.google.com/spreadsheets/d/... หรือ Web App URL">
+        <p class="help-text" style="margin-top: 0.5rem;">
+          <strong>วิธีที่ 1 (ง่ายที่สุด):</strong> ตั้งค่าแชร์ Google Sheet ของคุณให้เป็น <strong>"ทุกคนที่มีลิงก์มีสิทธิ์อ่าน" (Anyone with the link can view)</strong> จากนั้นคัดลอก URL ของบราวเซอร์มาวางได้ทันที!
         </p>
       </div>
       
       <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-top: 1rem;">
-        <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-primary);"><i data-lucide="help-circle" style="width: 14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> วิธีการตั้งค่าใน Google Sheet:</h4>
+        <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-primary);"><i data-lucide="help-circle" style="width: 14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> วิธีที่ 2 (เชื่อมต่อผ่าน Apps Script Web App):</h4>
         <ol style="font-size: 0.75rem; color: var(--text-secondary); padding-left: 1.25rem; line-height: 1.5; display:flex; flex-direction:column; gap:0.25rem;">
-          <li>เปิด Google Sheet ของคุณ</li>
-          <li>เลือกเมนู <strong>ส่วนขยาย (Extensions)</strong> -> <strong>Apps Script</strong></li>
+          <li>เปิด Google Sheet ของคุณ -> เลือกเมนู <strong>ส่วนขยาย (Extensions)</strong> -> <strong>Apps Script</strong></li>
           <li>ก๊อบปี้โค้ดในไฟล์ <code>google_apps_script.js</code> ไปวางแทนโค้ดเดิมทั้งหมดแล้วกดบันทึก</li>
           <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy)</strong> -> <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong></li>
           <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong>, กำหนดผู้มีสิทธิ์เข้าถึงเป็น <strong>ทุกคน (Anyone)</strong></li>
