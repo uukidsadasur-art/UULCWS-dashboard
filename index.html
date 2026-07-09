@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UULCWS Dashboard — ระบบติดตามโรงบำบัดน้ำเสียและผลิตน้ำประปา</title>
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- ApexCharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+
+  <!-- Fullscreen Pre-loader -->
+  <div id="loader" style="display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(255,255,255,0.9); z-index: 1000; align-items:center; justify-content:center; flex-direction:column; gap: 1rem;">
+    <div style="width: 42px; height: 42px; border: 4px solid rgba(79,70,229,0.1); border-top: 4px solid var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px;">กำลังดึงข้อมูลสดจาก Google Sheets...</span>
+  </div>
+  
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
+  <div class="app-container">
+    
+    <!-- 1. Sidebar Menu (Clean White) -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">U</div>
+        <div class="brand-text">UULCWS Dash</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <a id="nav-overview" class="nav-item active" onclick="switchTab('overview')">
+          <i data-lucide="layout-dashboard"></i>
+          <span>ภาพรวมระบบ</span>
+        </a>
+        <a id="nav-ww" class="nav-item" onclick="switchTab('ww')">
+          <i data-lucide="activity"></i>
+          <span>โรงบำบัดน้ำเสีย</span>
+        </a>
+        <a id="nav-water" class="nav-item" onclick="switchTab('water')">
+          <i data-lucide="droplets"></i>
+          <span>โรงผลิตน้ำประปา</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button id="btn-settings" class="btn" style="width: 100%;">
+          <i data-lucide="settings"></i>
+          <span>ตั้งค่าเชื่อมต่อ Sheet</span>
+        </button>
+      </div>
+    </aside>
+    
+    <!-- 2. Main Dashboard Panel -->
+    <main class="main-content">
+      
+      <!-- Top Navigation Header -->
+      <header class="top-bar">
+        <div class="page-title">
+          <h1>UULCWS Smart Dashboard</h1>
+          <p>ระบบติดตามปริมาณและคุณภาพน้ำ แพลนท์บำบัดน้ำเสีย & แพลนท์ผลิตน้ำประปา</p>
+        </div>
+        
+        <!-- Filter Controls -->
+        <div class="filter-bar">
+          <div class="time-tabs">
+            <button class="time-tab active" data-mode="daily">รายวัน</button>
+            <button class="time-tab" data-mode="weekly">รายสัปดาห์</button>
+            <button class="time-tab" data-mode="monthly">รายเดือน</button>
+            <button class="time-tab" data-mode="yearly">รายปี</button>
+          </div>
+          
+          <div class="selectors">
+            <div class="select-container">
+              <select id="select-year" class="selector-dropdown"></select>
+            </div>
+            
+            <div class="select-container">
+              <select id="select-month" class="selector-dropdown"></select>
+            </div>
+            
+            <div class="select-container">
+              <select id="select-date" class="selector-dropdown"></select>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Data Source Controller Toggle -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; align-items: center; justify-content: flex-end;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500; margin-right: 0.25rem;">แหล่งข้อมูล:</span>
+        <button id="btn-source-preloaded" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: var(--radius-sm);">
+          <i data-lucide="database" style="width: 13px; height: 13px;"></i> Offline Excel
+        </button>
+        <button id="btn-source-live" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: var(--radius-sm);">
+          <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i> Live Google Sheets
+        </button>
+      </div>
+      
+      <!-- 3. KPI stats cards (Filtered dynamically by JS) -->
+      <section class="kpi-grid">
+        <!-- KPI 1: Wastewater Flow -->
+        <div id="kpi-card-ww-flow" class="kpi-card ww">
+          <div class="kpi-header">
+            <span>น้ำเสียเข้าระบบรวม</span>
+            <div class="kpi-icon"><i data-lucide="activity"></i></div>
+          </div>
+          <div id="ww-kpi-val" class="kpi-value">- <span class="kpi-unit">ลบ.ม.</span></div>
+          <div class="kpi-footer">
+            <span id="ww-trend-badge" class="trend-badge"></span>
+            <span id="ww-compare-text" class="kpi-compare-text"></span>
+          </div>
+        </div>
+        
+        <!-- KPI 2: Wastewater COD Sump -->
+        <div id="kpi-card-ww-cod" class="kpi-card ww">
+          <div class="kpi-header">
+            <span>COD Collecting Sump</span>
+            <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+          </div>
+          <div id="cod-kpi-val" class="kpi-value">- <span class="kpi-unit">mg/L</span></div>
+          <div class="kpi-footer">
+            <span id="cod-trend-badge" class="trend-badge"></span>
+            <span id="cod-compare-text" class="kpi-compare-text"></span>
+          </div>
+        </div>
+        
+        <!-- KPI 3: Water Distribution -->
+        <div id="kpi-card-water-flow" class="kpi-card water">
+          <div class="kpi-header">
+            <span>ปริมาณน้ำจ่ายรวม</span>
+            <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+          </div>
+          <div id="water-kpi-val" class="kpi-value">- <span class="kpi-unit">ลบ.ม.</span></div>
+          <div class="kpi-footer">
+            <span id="water-trend-badge" class="trend-badge"></span>
+            <span id="water-compare-text" class="kpi-compare-text"></span>
+          </div>
+        </div>
+        
+        <!-- KPI 4: Raw Water pH -->
+        <div id="kpi-card-water-ph" class="kpi-card water">
+          <div class="kpi-header">
+            <span>pH น้ำดิบ (เฉลี่ย)</span>
+            <div class="kpi-icon"><i data-lucide="droplet"></i></div>
+          </div>
+          <div id="ph-kpi-val" class="kpi-value">- <span class="kpi-unit">pH</span></div>
+          <div class="kpi-footer">
+            <span id="ph-trend-badge" class="trend-badge"></span>
+            <span id="ph-compare-text" class="kpi-compare-text"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Unified Daily Text Report Card -->
+      <section id="unified-report-section" class="stat-widget" style="margin-bottom: 2rem;">
+        <div class="widget-title">
+          <span>รายงานประจำวัน</span>
+          <span id="report-date-label" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">ข้อมูลประจำวันที่ 01/01/2569</span>
+        </div>
+        
+        <div style="max-width: 600px; margin: 0 auto;">
+          <!-- 1. ปริมาณน้ำดิบรวม -->
+          <div class="widget-row">
+            <div class="widget-label">ปริมาณน้ำดิบรวม</div>
+            <div class="widget-val" id="report-raw-total" style="font-weight: 600;">-</div>
+          </div>
+          
+          <!-- 2. ปริมาณน้ำประปารวม -->
+          <div class="widget-row">
+            <div class="widget-label">ปริมาณน้ำประปารวม</div>
+            <div class="widget-val" id="report-water-total" style="font-weight: 700; color: var(--color-water);">-</div>
+          </div>
+          
+          <!-- 3. % น้ำสูญเสียเฉลี่ยสะสม -->
+          <div class="widget-row">
+            <div class="widget-label">% น้ำสูญเสียเฉลี่ยสะสม</div>
+            <div class="widget-val" id="report-water-loss" style="color: var(--color-ww); font-weight: 700;">-</div>
+          </div>
+          
+          <!-- 4. ปริมาณน้ำเสีย -->
+          <div class="widget-row">
+            <div class="widget-label">ปริมาณน้ำเสียรวมเข้าระบบบำบัด</div>
+            <div class="widget-val" id="report-ww-total" style="font-weight: 700; color: var(--color-ww);">-</div>
+          </div>
+          
+          <!-- SECTION: คุณภาพน้ำ -->
+          <div class="report-group-title" style="margin-top: 1.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;">
+            คุณภาพน้ำ
+          </div>
+          
+          <!-- 5. ความขุ่น น้ำดิบ -->
+          <div class="widget-row">
+            <div class="widget-label">ความขุ่น น้ำดิบ</div>
+            <div class="widget-val" id="report-turb-raw">-</div>
+          </div>
+          
+          <!-- 6. ความขุ่น น้ำประปา -->
+          <div class="widget-row">
+            <div class="widget-label">ความขุ่น น้ำประปา</div>
+            <div class="widget-val" id="report-turb-tap">-</div>
+          </div>
+          
+          <!-- 7. pH น้ำดิบ -->
+          <div class="widget-row">
+            <div class="widget-label">
+              <span class="status-indicator" id="ind-report-ph-raw"></span>pH น้ำดิบ
+            </div>
+            <div class="widget-val" id="report-ph-raw">-</div>
+          </div>
+          
+          <!-- 8. pH น้ำประปา -->
+          <div class="widget-row">
+            <div class="widget-label">
+              <span class="status-indicator" id="ind-report-ph-tap"></span>pH น้ำประปา
+            </div>
+            <div class="widget-val" id="report-ph-tap">-</div>
+          </div>
+          
+          <!-- 9. คลอรีน น้ำประปา -->
+          <div class="widget-row">
+            <div class="widget-label">คลอรีน น้ำประปา</div>
+            <div class="widget-val" id="report-chlorine">-</div>
+          </div>
+          
+          <!-- 10. COD น้ำเสียเข้าระบบ -->
+          <div class="widget-row">
+            <div class="widget-label">
+              <span class="status-indicator" id="ind-report-cod-sump"></span>COD น้ำเสียเข้าระบบ (Lab)
+            </div>
+            <div class="widget-val" id="report-cod-sump">-</div>
+          </div>
+          
+          <!-- 11. COD น้ำเสียออกจากระบบ -->
+          <div class="widget-row">
+            <div class="widget-label">
+              <span class="status-indicator" id="ind-report-cod-post"></span>COD น้ำเสียออกจากระบบ (Lab)
+            </div>
+            <div class="widget-val" id="report-cod-post">-</div>
+          </div>
+          
+          <!-- 12. COD online -->
+          <div class="widget-row">
+            <div class="widget-label">COD online บ่อ Post Aeration</div>
+            <div class="widget-val" id="report-cod-online">-</div>
+          </div>
+          
+          <!-- 13. BOD online -->
+          <div class="widget-row">
+            <div class="widget-label">BOD online บ่อ Post Aeration</div>
+            <div class="widget-val" id="report-bod-online">-</div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 5. Dashboard Grid for Charts -->
+      <section class="dashboard-grid">
+        
+        <!-- LEFT COLUMN: โรงบำบัดน้ำเสีย (Wastewater Plant) -->
+        <div id="ww-section" class="section-container">
+          <div class="section-header-row">
+            <div class="section-icon ww-section-icon"><i data-lucide="activity"></i></div>
+            <h2 class="section-title">โรงบำบัดน้ำเสีย (Wastewater Plant)</h2>
+          </div>
+          
+          <!-- WW Quantity Card -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ปริมาณน้ำเสียเข้าระบบบำบัดรวม</h3>
+                <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,300 ลบ.ม./วัน</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-ww-qty"></div>
+            </div>
+          </div>
+
+          <!-- WW COD Sump Card -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ค่า COD บ่อ Collecting Sump</h3>
+                <p>เกณฑ์มาตรฐานสูงสุดไม่เกิน 750 mg/L</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-cod-sump"></div>
+            </div>
+          </div>
+
+          <!-- WW COD Post Aeration Card -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ค่า COD บ่อ Post Aeration (Lab)</h3>
+                <p>เกณฑ์มาตรฐานสูงสุดไม่เกิน 120 mg/L</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-cod-post"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- RIGHT COLUMN: โรงผลิตน้ำประปา (Tap Water Plant) -->
+        <div id="water-section" class="section-container">
+          <div class="section-header-row">
+            <div class="section-icon water-section-icon"><i data-lucide="droplet"></i></div>
+            <h2 class="section-title">โรงผลิตน้ำประปา (Tap Water Plant)</h2>
+          </div>
+          
+          <!-- Water Quantity Distribution -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ปริมาณน้ำจ่ายรวม</h3>
+                <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,800 ลบ.ม./วัน</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-water-qty"></div>
+            </div>
+          </div>
+
+          <!-- Raw Water Intake -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ปริมาณน้ำดิบรวม</h3>
+                <p>ปริมาณน้ำดิบรวมเข้าระบบผลิตน้ำประปา</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-raw-intake"></div>
+            </div>
+          </div>
+
+          <!-- Water pH Raw Card -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3>ค่า pH น้ำดิบ (Raw Water pH)</h3>
+                <p>เกณฑ์มาตรฐานควบคุมช่วง pH 6.0 - 9.0</p>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <div id="chart-ph-raw"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <!-- 6. Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>ตั้งค่าการเชื่อมต่อ Google Sheets Live Sync</h2>
+        <button id="btn-close-modal" class="modal-close">&times;</button>
+      </div>
+      
+      <div class="form-group">
+        <label for="input-live-url">Google Apps Script Web App URL</label>
+        <input type="text" id="input-live-url" class="form-input" placeholder="https://script.google.com/macros/s/.../exec">
+        <p class="help-text">
+          วาง URL ที่ได้จากการ Deploy Apps Script เป็น Web App (สิทธิ์เข้าถึง: Anyone) เพื่อดึงข้อมูลสดตรงจากชีตของคุณ
+        </p>
+      </div>
+      
+      <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-top: 1rem;">
+        <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-primary);"><i data-lucide="help-circle" style="width: 14px; height:14px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> วิธีการตั้งค่าใน Google Sheet:</h4>
+        <ol style="font-size: 0.75rem; color: var(--text-secondary); padding-left: 1.25rem; line-height: 1.5; display:flex; flex-direction:column; gap:0.25rem;">
+          <li>เปิด Google Sheet ของคุณ</li>
+          <li>เลือกเมนู <strong>ส่วนขยาย (Extensions)</strong> -> <strong>Apps Script</strong></li>
+          <li>ก๊อบปี้โค้ดในไฟล์ <code>google_apps_script.js</code> ไปวางแทนโค้ดเดิมทั้งหมดแล้วกดบันทึก</li>
+          <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy)</strong> -> <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong></li>
+          <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong>, กำหนดผู้มีสิทธิ์เข้าถึงเป็น <strong>ทุกคน (Anyone)</strong></li>
+          <li>กด Deploy คัดลอก URL ที่ได้มาวางที่ช่องด้านบน แล้วกดบันทึก</li>
+        </ol>
+      </div>
+      
+      <div class="modal-footer">
+        <button id="btn-cancel-settings" class="btn">ยกเลิก</button>
+        <button id="btn-save-settings" class="btn btn-primary">บันทึก & เชื่อมต่อ</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 7. Toast Notification Container -->
+  <div id="toast-container" class="toast"></div>
+
+  <!-- Javascript Logic Files -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
