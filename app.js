@@ -85,14 +85,30 @@ function usePreloadedData() {
   }
 }
 
+function parseSheetIdFromUrl(url) {
+  if (!url) return null;
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+  if (url.match(/^[a-zA-Z0-9-_]{40,50}$/)) return url;
+  return null;
+}
+
 function fetchLiveData() {
   if (!state.liveUrl) {
-    showToast('กรุณาระบุ URL ของ Google Sheets API ในเมนูตั้งค่า', 'error');
+    showToast('กรุณาระบุลิงก์ Google Sheets หรือ Web App URL ในเมนูตั้งค่า', 'error');
     setDataSource('preloaded');
     return;
   }
 
+  const sheetId = parseSheetIdFromUrl(state.liveUrl);
+  if (sheetId) {
+    fetchAutoGoogleSheet(sheetId);
+    return;
+  }
+
+  // Otherwise, treat as Apps Script Web App JSON URL
   document.getElementById('loader').style.display = 'flex';
+  document.getElementById('loader').querySelector('span').textContent = 'กำลังโหลดข้อมูลสดจาก Google Apps Script...';
   
   fetch(state.liveUrl)
     .then(res => {
@@ -104,7 +120,7 @@ function fetchLiveData() {
       if (!Array.isArray(data) || data.length === 0) throw new Error('Data format is invalid or empty');
       
       state.allData = data;
-      showToast('ดึงข้อมูลสดสำเร็จ', 'success');
+      showToast('ดึงข้อมูลสดผ่าน Apps Script สำเร็จ', 'success');
       processDataAndRender();
     })
     .catch(err => {
@@ -118,45 +134,79 @@ function fetchLiveData() {
 }
 
 // Automatic Google Sheet direct fetch & CSV parse
-async function fetchAutoGoogleSheet() {
+async function fetchAutoGoogleSheet(customSheetId) {
+  const activeSheetId = customSheetId || SHEET_ID;
+  const qtyUrl = `https://docs.google.com/spreadsheets/d/${activeSheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('ข้อมูลปริมาณน้ำ')}`;
+  const qualUrl = `https://docs.google.com/spreadsheets/d/${activeSheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('คุณภาพน้ำ')}`;
+
   document.getElementById('loader').style.display = 'flex';
   document.getElementById('loader').querySelector('span').textContent = 'กำลังโหลดข้อมูลสดจาก Google Sheet...';
   
   try {
-    const qtyRes = await fetch(SHEET_QTY_URL);
-    if (!qtyRes.ok) throw new Error('Cannot fetch Quantity sheet');
+    const qtyRes = await fetch(qtyUrl);
+    if (!qtyRes.ok) throw new Error('ไม่สามารถเข้าถึงแผ่นงานข้อมูลปริมาณน้ำได้ (โปรดตรวจสอบการตั้งค่าแชร์แผ่นงานให้เป็นสาธารณะ)');
     const qtyText = await qtyRes.text();
     const qtyRows = parseCSV(qtyText);
     
-    const qualRes = await fetch(SHEET_QUAL_URL);
-    if (!qualRes.ok) throw new Error('Cannot fetch Quality sheet');
+    const qualRes = await fetch(qualUrl);
+    if (!qualRes.ok) throw new Error('ไม่สามารถเข้าถึงแผ่นงานข้อมูลคุณภาพน้ำได้ (โปรดตรวจสอบการตั้งค่าแชร์แผ่นงานให้เป็นสาธารณะ)');
     const qualText = await qualRes.text();
     const qualRows = parseCSV(qualText);
+    
+    // Find Date Column dynamically in Quantity sheet (Self-healing offset)
+    let qtyDateColIdx = -1;
+    for (let i = 4; i < qtyRows.length; i++) {
+      const row = qtyRows[i];
+      for (let j = 0; j < row.length; j++) {
+        if (parseCSVDate(row[j])) {
+          qtyDateColIdx = j;
+          break;
+        }
+      }
+      if (qtyDateColIdx !== -1) break;
+    }
+    if (qtyDateColIdx === -1) qtyDateColIdx = 1; // Fallback to column B
+    const qtyOffset = qtyDateColIdx - 1;
+    
+    // Find Date Column dynamically in Quality sheet
+    let qualDateColIdx = -1;
+    for (let i = 7; i < qualRows.length; i++) {
+      const row = qualRows[i];
+      for (let j = 0; j < row.length; j++) {
+        if (parseCSVDate(row[j])) {
+          qualDateColIdx = j;
+          break;
+        }
+      }
+      if (qualDateColIdx !== -1) break;
+    }
+    if (qualDateColIdx === -1) qualDateColIdx = 1; // Fallback to column B
+    const qualOffset = qualDateColIdx - 1;
     
     const records = {};
     
     // Parse Quantity (start from row index 4, i.e., Row 5 in Sheet)
     for (let i = 4; i < qtyRows.length; i++) {
       const row = qtyRows[i];
-      if (!row || row.length < 2) continue;
-      const dateStr = parseCSVDate(row[1]); // Col B
+      if (!row || row.length <= qtyDateColIdx) continue;
+      const dateStr = parseCSVDate(row[qtyDateColIdx]);
       if (!dateStr) continue;
       
       records[dateStr] = {
         date: dateStr,
-        ww_qty_p1: parseCSVNum(row[3]),      // Col D
-        ww_qty_p2: parseCSVNum(row[5]),      // Col F
-        ww_qty_total: parseCSVNum(row[6]),   // Col G
-        ww_qty_min: parseCSVNum(row[7]),     // Col H
-        w_qty_p100: parseCSVNum(row[10]),    // Col K
-        w_qty_p150: parseCSVNum(row[12]),    // Col M
-        w_qty_total: parseCSVNum(row[13]),   // Col N
-        w_qty_min: parseCSVNum(row[14]),     // Col O
-        raw_qty_p1: parseCSVNum(row[17]),    // Col R
-        raw_qty_p2: parseCSVNum(row[19]),    // Col T
-        raw_qty_p3: parseCSVNum(row[21]),    // Col V
-        raw_qty_total: parseCSVNum(row[22]), // Col W
-        water_loss_pct: parseCSVNum(row[29]) // Col AD
+        ww_qty_p1: parseCSVNum(row[3 + qtyOffset]),      // Col D
+        ww_qty_p2: parseCSVNum(row[5 + qtyOffset]),      // Col F
+        ww_qty_total: parseCSVNum(row[6 + qtyOffset]),   // Col G
+        ww_qty_min: parseCSVNum(row[7 + qtyOffset]),     // Col H
+        w_qty_p100: parseCSVNum(row[10 + qtyOffset]),    // Col K
+        w_qty_p150: parseCSVNum(row[12 + qtyOffset]),    // Col M
+        w_qty_total: parseCSVNum(row[13 + qtyOffset]),   // Col N
+        w_qty_min: parseCSVNum(row[14 + qtyOffset]),     // Col O
+        raw_qty_p1: parseCSVNum(row[17 + qtyOffset]),    // Col R
+        raw_qty_p2: parseCSVNum(row[19 + qtyOffset]),    // Col T
+        raw_qty_p3: parseCSVNum(row[21 + qtyOffset]),    // Col V
+        raw_qty_total: parseCSVNum(row[22 + qtyOffset]), // Col W
+        water_loss_pct: parseCSVNum(row[29 + qtyOffset]) // Col AD
       };
       
       // Cap negative quantities at null
@@ -171,19 +221,19 @@ async function fetchAutoGoogleSheet() {
     // Parse Quality (start from row index 7, i.e., Row 8 in Sheet)
     for (let i = 7; i < qualRows.length; i++) {
       const row = qualRows[i];
-      if (!row || row.length < 2) continue;
-      const dateStr = parseCSVDate(row[1]); // Col B
+      if (!row || row.length <= qualDateColIdx) continue;
+      const dateStr = parseCSVDate(row[qualDateColIdx]);
       if (!dateStr || !records[dateStr]) continue;
       
-      records[dateStr].turb_raw = parseCSVNum(row[2]);   // Col C
-      records[dateStr].turb_tap = parseCSVNum(row[3]);   // Col D
-      records[dateStr].chlorine = parseCSVNum(row[4]);   // Col E
-      records[dateStr].ph_raw = parseCSVNum(row[5]);     // Col F
-      records[dateStr].ph_tap = parseCSVNum(row[6]);     // Col G
-      records[dateStr].cod_sump = parseCSVNum(row[7]);    // Col H
-      records[dateStr].cod_post = parseCSVNum(row[8]);    // Col I
-      records[dateStr].cod_online = parseCSVNum(row[9]);  // Col J
-      records[dateStr].bod_online = parseCSVNum(row[10]); // Col K
+      records[dateStr].turb_raw = parseCSVNum(row[2 + qualOffset]);   // Col C
+      records[dateStr].turb_tap = parseCSVNum(row[3 + qualOffset]);   // Col D
+      records[dateStr].chlorine = parseCSVNum(row[4 + qualOffset]);   // Col E
+      records[dateStr].ph_raw = parseCSVNum(row[5 + qualOffset]);     // Col F
+      records[dateStr].ph_tap = parseCSVNum(row[6 + qualOffset]);     // Col G
+      records[dateStr].cod_sump = parseCSVNum(row[7 + qualOffset]);    // Col H
+      records[dateStr].cod_post = parseCSVNum(row[8 + qualOffset]);    // Col I
+      records[dateStr].cod_online = parseCSVNum(row[9 + qualOffset]);  // Col J
+      records[dateStr].bod_online = parseCSVNum(row[10 + qualOffset]); // Col K
     }
     
     // Convert to sorted array
@@ -199,16 +249,16 @@ async function fetchAutoGoogleSheet() {
     
     list.sort((a, b) => new Date(a.date) - new Date(b.date));
     
-    if (list.length === 0) throw new Error('No valid records parsed from sheet');
+    if (list.length === 0) throw new Error('ไม่พบแถวข้อมูลวันที่ถูกต้องในไฟล์ชีต');
     
     state.allData = list;
     state.dataSource = 'live';
     updateSourceToggleUI();
-    showToast('อัปเดตข้อมูลสดเชื่อมโยงอัตโนมัติจาก Google Sheet เรียบร้อย', 'success');
+    showToast('เชื่อมโยงอัปเดตข้อมูลสดอัตโนมัติสำเร็จ', 'success');
     processDataAndRender();
   } catch (err) {
     console.error('Auto Sheet Fetch failed:', err);
-    showToast('เชื่อมโยงชีตอัตโนมัติไม่สำเร็จ กำลังใช้ข้อมูลออฟไลน์แทน', 'error');
+    showToast('เชื่อมโยงชีตไม่สำเร็จ: ' + err.message, 'error');
     state.dataSource = 'preloaded';
     usePreloadedData();
   } finally {
@@ -267,12 +317,26 @@ function parseCSVDate(val) {
   
   const parts = str.split('/');
   if (parts.length === 3) {
-    const d = String(parseInt(parts[0])).padStart(2, '0');
-    const m = String(parseInt(parts[1])).padStart(2, '0');
+    let p0 = parseInt(parts[0]);
+    let p1 = parseInt(parts[1]);
     let y = parseInt(parts[2]);
     if (y > 2500) y -= 543;
+    
+    let m, d;
+    if (p0 > 12) {
+      d = String(p0).padStart(2, '0');
+      m = String(p1).padStart(2, '0');
+    } else if (p1 > 12) {
+      m = String(p0).padStart(2, '0');
+      d = String(p1).padStart(2, '0');
+    } else {
+      // Default to M/D/Y (standard Excel/Google Sheets export format)
+      m = String(p0).padStart(2, '0');
+      d = String(p1).padStart(2, '0');
+    }
     return `${y}-${m}-${d}`;
   }
+  
   const num = parseFloat(str);
   if (!isNaN(num) && num > 40000) {
     const d = new Date((num - 25569) * 86400 * 1000);
