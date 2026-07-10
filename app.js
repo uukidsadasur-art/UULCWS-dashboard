@@ -322,18 +322,8 @@ function parseCSVDate(val) {
     let y = parseInt(parts[2]);
     if (y > 2500) y -= 543;
     
-    let m, d;
-    if (p0 > 12) {
-      d = String(p0).padStart(2, '0');
-      m = String(p1).padStart(2, '0');
-    } else if (p1 > 12) {
-      m = String(p0).padStart(2, '0');
-      d = String(p1).padStart(2, '0');
-    } else {
-      // Default to M/D/Y (standard Excel/Google Sheets export format)
-      m = String(p0).padStart(2, '0');
-      d = String(p1).padStart(2, '0');
-    }
+    let d = String(p0).padStart(2, '0');
+    let m = String(p1).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
   
