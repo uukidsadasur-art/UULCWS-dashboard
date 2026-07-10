@@ -320,7 +320,15 @@ function parseCSVDate(val) {
     let p0 = parseInt(parts[0]);
     let p1 = parseInt(parts[1]);
     let y = parseInt(parts[2]);
-    if (y > 2500) y -= 543;
+    if (y < 100) {
+      if (y >= 60) {
+        y = 2500 + y - 543; // E.g., 69 -> 2569 - 543 = 2026
+      } else {
+        y = 2000 + y;       // E.g., 26 -> 2026
+      }
+    } else if (y > 2500) {
+      y -= 543;
+    }
     
     let d = String(p0).padStart(2, '0');
     let m = String(p1).padStart(2, '0');
