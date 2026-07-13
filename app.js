@@ -385,11 +385,7 @@ function updateSourceToggleUI() {
 function processDataAndRender() {
   if (state.allData.length === 0) return;
   
-  populateYearDropdown();
-  populateMonthDropdown();
-  populateDateDropdown();
-  
-  // Set default selected date to the latest date that has actual data
+  // 1. Find default record (latest date with actual data)
   let defaultRec = null;
   for (let i = state.allData.length - 1; i >= 0; i--) {
     const rec = state.allData[i];
@@ -410,11 +406,27 @@ function processDataAndRender() {
     const parts = defaultRec.date.split('-');
     state.selectedYear = parts[0];
     state.selectedMonth = parts[1];
-    
-    // Sync dropdowns
-    document.getElementById('select-year').value = state.selectedYear;
-    document.getElementById('select-month').value = state.selectedMonth;
-    document.getElementById('select-date').value = state.selectedDate;
+  }
+  
+  // 2. Populate and sync Year dropdown
+  populateYearDropdown();
+  const selectYear = document.getElementById('select-year');
+  if (state.selectedYear) {
+    selectYear.value = state.selectedYear;
+  }
+  
+  // 3. Populate and sync Month dropdown (depends on selected year)
+  populateMonthDropdown();
+  const selectMonth = document.getElementById('select-month');
+  if (state.selectedMonth) {
+    selectMonth.value = state.selectedMonth;
+  }
+  
+  // 4. Populate and sync Date dropdown (depends on selected year and month)
+  populateDateDropdown();
+  const selectDate = document.getElementById('select-date');
+  if (state.selectedDate) {
+    selectDate.value = state.selectedDate;
   }
   
   updateDashboard();
