@@ -393,12 +393,8 @@ function processDataAndRender() {
   let defaultRec = null;
   for (let i = state.allData.length - 1; i >= 0; i--) {
     const rec = state.allData[i];
-    const hasData = rec.ww_qty_total !== null || 
-                    rec.w_qty_total !== null || 
-                    rec.raw_qty_total !== null || 
-                    rec.turb_raw !== null || 
-                    rec.turb_tap !== null || 
-                    rec.ph_raw !== null;
+    const hasData = (rec.ww_qty_p1 > 0 || rec.ww_qty_p2 > 0 || rec.w_qty_p100 > 0 || rec.w_qty_p150 > 0 || rec.raw_qty_p1 > 0 || rec.raw_qty_p2 > 0 || rec.raw_qty_p3 > 0) ||
+                    (rec.turb_raw !== null || rec.turb_tap !== null || rec.chlorine !== null || rec.ph_raw !== null || rec.ph_tap !== null || rec.cod_sump !== null || rec.cod_post !== null || rec.cod_online !== null || rec.bod_online !== null);
     if (hasData) {
       defaultRec = rec;
       break;
