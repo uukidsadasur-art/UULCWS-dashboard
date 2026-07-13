@@ -389,11 +389,29 @@ function processDataAndRender() {
   populateMonthDropdown();
   populateDateDropdown();
   
-  // Set default selected date to the last available date in the dataset
-  const lastRec = state.allData[state.allData.length - 1];
-  if (lastRec && lastRec.date) {
-    state.selectedDate = lastRec.date;
-    const parts = lastRec.date.split('-');
+  // Set default selected date to the latest date that has actual data
+  let defaultRec = null;
+  for (let i = state.allData.length - 1; i >= 0; i--) {
+    const rec = state.allData[i];
+    const hasData = rec.ww_qty_total !== null || 
+                    rec.w_qty_total !== null || 
+                    rec.raw_qty_total !== null || 
+                    rec.turb_raw !== null || 
+                    rec.turb_tap !== null || 
+                    rec.ph_raw !== null;
+    if (hasData) {
+      defaultRec = rec;
+      break;
+    }
+  }
+  
+  if (!defaultRec && state.allData.length > 0) {
+    defaultRec = state.allData[state.allData.length - 1];
+  }
+
+  if (defaultRec && defaultRec.date) {
+    state.selectedDate = defaultRec.date;
+    const parts = defaultRec.date.split('-');
     state.selectedYear = parts[0];
     state.selectedMonth = parts[1];
     
