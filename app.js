@@ -774,14 +774,19 @@ function getFilteredData() {
   const start = state.startDate;
   const end = state.endDate;
   
-  // 1. Get raw records in range
-  const rangeRecords = state.allData.filter(r => r.date >= start && r.date <= end);
+  // Extract active year, month, and day from start date for legacy context
+  const parts = start.split('-');
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
   
   let data = [];
   let chartData = [];
   let aggregatedRecord = {};
   
   if (state.viewMode === 'daily') {
+    // 1. Get raw records in range
+    const rangeRecords = state.allData.filter(r => r.date >= start && r.date <= end);
     data = rangeRecords;
     chartData = rangeRecords.map(r => ({
       x: formatShortDate(r.date),
@@ -819,62 +824,101 @@ function getFilteredData() {
   } 
   
   else if (state.viewMode === 'weekly') {
-    const weeklyGroups = {};
-    rangeRecords.forEach(r => {
-      const wk = getYearWeek(r.date);
-      if (!weeklyGroups[wk]) weeklyGroups[wk] = [];
-      weeklyGroups[wk].push(r);
+    // Filter data for the selected month of the active year only
+    const monthData = state.allData.filter(r => r.date.startsWith(`${year}-${month}`));
+    
+    // Group into Week 1 (day 1-7), Week 2 (day 8-14), Week 3 (day 15-21), Week 4 (day 22-28), Week 5 (day 29+)
+    const weeklyGroups = {
+      'Week 1': [],
+      'Week 2': [],
+      'Week 3': [],
+      'Week 4': []
+    };
+    
+    if (monthData.length > 28) {
+      weeklyGroups['Week 5'] = [];
+    }
+    
+    monthData.forEach(r => {
+      const p = r.date.split('-');
+      if (p.length < 3) return;
+      const dVal = parseInt(p[2]);
+      
+      if (dVal >= 1 && dVal <= 7) {
+        weeklyGroups['Week 1'].push(r);
+      } else if (dVal >= 8 && dVal <= 14) {
+        weeklyGroups['Week 2'].push(r);
+      } else if (dVal >= 15 && dVal <= 21) {
+        weeklyGroups['Week 3'].push(r);
+      } else if (dVal >= 22 && dVal <= 28) {
+        weeklyGroups['Week 4'].push(r);
+      } else if (dVal >= 29) {
+        if (weeklyGroups['Week 5']) {
+          weeklyGroups['Week 5'].push(r);
+        } else {
+          weeklyGroups['Week 4'].push(r);
+        }
+      }
     });
     
-    const sortedWeeks = Object.keys(weeklyGroups).sort();
-    chartData = sortedWeeks.map(wk => {
+    const activeWeeks = Object.keys(weeklyGroups);
+    chartData = activeWeeks.map(wk => {
       const group = weeklyGroups[wk];
       const stats = computePeriodStats(group);
-      const parts = wk.split('-W');
-      const yr = parseInt(parts[0]) + 543;
-      const wkNum = parseInt(parts[1]);
       return {
-        x: `สัปดาห์ที่ ${wkNum} (${yr})`,
+        x: wk,
         rawX: wk,
         ...stats
       };
     });
     
     data = chartData;
-    aggregatedRecord = computePeriodStats(rangeRecords);
-    aggregatedRecord.dateLabel = `ข้อมูลรายสัปดาห์ ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
+    
+    // Determine which week group the selected start date belongs to
+    const selectedDay = parseInt(day);
+    let activeWk = 'Week 1';
+    if (selectedDay >= 1 && selectedDay <= 7) activeWk = 'Week 1';
+    else if (selectedDay >= 8 && selectedDay <= 14) activeWk = 'Week 2';
+    else if (selectedDay >= 15 && selectedDay <= 21) activeWk = 'Week 3';
+    else if (selectedDay >= 22 && selectedDay <= 28) activeWk = 'Week 4';
+    else if (selectedDay >= 29) activeWk = weeklyGroups['Week 5'] ? 'Week 5' : 'Week 4';
+    
+    const targetGroup = weeklyGroups[activeWk] || [];
+    aggregatedRecord = computePeriodStats(targetGroup);
+    aggregatedRecord.dateLabel = `สัปดาห์ ${activeWk} ของเดือน${THAI_MONTHS_FULL[month]} พ.ศ. ${parseInt(year) + 543}`;
   } 
   
   else if (state.viewMode === 'monthly') {
+    // Monthly aggregation for the active year
+    const yearData = state.allData.filter(r => r.date.startsWith(year));
     const monthlyGroups = {};
-    rangeRecords.forEach(r => {
-      const mStr = r.date.substring(0, 7);
-      if (!monthlyGroups[mStr]) monthlyGroups[mStr] = [];
-      monthlyGroups[mStr].push(r);
+    yearData.forEach(r => {
+      const m = r.date.split('-')[1];
+      if (!monthlyGroups[m]) monthlyGroups[m] = [];
+      monthlyGroups[m].push(r);
     });
     
     const sortedMonths = Object.keys(monthlyGroups).sort();
-    chartData = sortedMonths.map(mStr => {
-      const group = monthlyGroups[mStr];
+    chartData = sortedMonths.map(m => {
+      const group = monthlyGroups[m];
       const stats = computePeriodStats(group);
-      const parts = mStr.split('-');
-      const y = parts[0];
-      const m = parts[1];
       return {
-        x: `${THAI_MONTHS_SHORT[m]} ${String(parseInt(y) - 2000 + 43)}`,
-        rawX: mStr,
+        x: `${THAI_MONTHS_SHORT[m]} ${String(parseInt(year) - 2000 + 43)}`,
+        rawX: m,
         ...stats
       };
     });
     
     data = chartData;
-    aggregatedRecord = computePeriodStats(rangeRecords);
-    aggregatedRecord.dateLabel = `ข้อมูลรายเดือน ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
+    const targetGroup = monthlyGroups[month] || [];
+    aggregatedRecord = computePeriodStats(targetGroup);
+    aggregatedRecord.dateLabel = `เดือน ${THAI_MONTHS_FULL[month]} พ.ศ. ${parseInt(year) + 543}`;
   } 
   
   else if (state.viewMode === 'yearly') {
+    // Yearly aggregation for all data
     const yearlyGroups = {};
-    rangeRecords.forEach(r => {
+    state.allData.forEach(r => {
       const y = r.date.split('-')[0];
       if (!yearlyGroups[y]) yearlyGroups[y] = [];
       yearlyGroups[y].push(r);
@@ -892,10 +936,10 @@ function getFilteredData() {
     });
     
     data = chartData;
-    aggregatedRecord = computePeriodStats(rangeRecords);
-    aggregatedRecord.dateLabel = `ข้อมูลรายปี ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
+    const targetGroup = yearlyGroups[year] || [];
+    aggregatedRecord = computePeriodStats(targetGroup);
+    aggregatedRecord.dateLabel = `ปี พ.ศ. ${parseInt(year) + 543}`;
   }
-  
   return { data, chartData, aggregatedRecord };
 }
 
