@@ -514,7 +514,10 @@ function renderCalendar() {
         }
       }
       
-      cell.addEventListener('click', () => handleCalDayClick(curDateStr));
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleCalDayClick(curDateStr);
+      });
       
       cell.addEventListener('mouseenter', () => {
         if (state.startDate && !state.endDate) {
@@ -618,6 +621,11 @@ function setupEventListeners() {
       e.stopPropagation();
       const isOpen = popover.classList.contains('open');
       if (isOpen) {
+        if (state.startDate && !state.endDate) {
+          state.endDate = state.startDate;
+          updateDatePickerLabel();
+          updateDashboard();
+        }
         popover.classList.remove('open');
         pickerBtn.classList.remove('active');
       } else {
@@ -627,10 +635,23 @@ function setupEventListeners() {
       }
     });
     
+    // Block clicks inside the popover from bubbling to document (prevent auto-close on day click)
+    popover.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
     document.addEventListener('click', (e) => {
       if (!popover.contains(e.target) && !pickerBtn.contains(e.target)) {
-        popover.classList.remove('open');
-        pickerBtn.classList.remove('active');
+        const isOpen = popover.classList.contains('open');
+        if (isOpen) {
+          if (state.startDate && !state.endDate) {
+            state.endDate = state.startDate;
+            updateDatePickerLabel();
+            updateDashboard();
+          }
+          popover.classList.remove('open');
+          pickerBtn.classList.remove('active');
+        }
       }
     });
   }
