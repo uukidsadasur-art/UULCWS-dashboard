@@ -471,6 +471,9 @@ function renderCalendar() {
     const dStr = String(d).padStart(2, '0');
     const curDateStr = `${state.currentCalYear}-${mStr}-${dStr}`;
     
+    // Store date on cell dataset for easy hover querying
+    cell.dataset.date = curDateStr;
+    
     // Check if within our dataset range (2026-01-01 to latest active date)
     const latestDateRec = state.allData[state.allData.length - 1];
     const latestDateStr = latestDateRec ? latestDateRec.date : '2026-12-31';
@@ -504,31 +507,56 @@ function renderCalendar() {
         cell.classList.add('in-range');
       }
       
-      // Hover selection preview
-      if (state.startDate && !state.endDate && state.tempHoverDate) {
-        if (curDateStr > state.startDate && curDateStr <= state.tempHoverDate) {
-          cell.classList.add('in-range');
-          if (curDateStr === state.tempHoverDate) {
-            cell.classList.add('range-end');
-          }
-        }
-      }
-      
       cell.addEventListener('click', (e) => {
         e.stopPropagation();
         handleCalDayClick(curDateStr);
       });
       
+      // Class-based hover preview (Performant: updates existing DOM classes instead of clearing & rebuilding)
       cell.addEventListener('mouseenter', () => {
         if (state.startDate && !state.endDate) {
-          state.tempHoverDate = curDateStr;
-          renderCalendar();
+          const hoverDate = curDateStr;
+          const allCells = daysGrid.querySelectorAll('.calendar-day.selectable:not(.disabled)');
+          allCells.forEach(c => {
+            const cDate = c.dataset.date;
+            if (cDate > state.startDate && cDate < hoverDate) {
+              c.classList.add('in-range');
+              c.classList.remove('range-end');
+              c.classList.remove('selected');
+            } else if (cDate === hoverDate && hoverDate !== state.startDate) {
+              c.classList.add('range-end');
+              c.classList.remove('in-range');
+              c.classList.remove('selected');
+            } else {
+              // Reset if it's not the start date
+              if (cDate !== state.startDate) {
+                c.classList.remove('in-range');
+                c.classList.remove('range-end');
+                c.classList.remove('selected');
+              }
+            }
+          });
         }
       });
     }
     
     daysGrid.appendChild(cell);
   }
+  
+  // Clear hover styles when mouse leaves grid container
+  daysGrid.addEventListener('mouseleave', () => {
+    if (state.startDate && !state.endDate) {
+      const allCells = daysGrid.querySelectorAll('.calendar-day.selectable:not(.disabled)');
+      allCells.forEach(c => {
+        const cDate = c.dataset.date;
+        if (cDate !== state.startDate) {
+          c.classList.remove('in-range');
+          c.classList.remove('range-end');
+          c.classList.remove('selected');
+        }
+      });
+    }
+  });
 }
 
 function handleCalDayClick(dateStr) {
