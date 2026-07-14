@@ -80,17 +80,32 @@
             <button class="time-tab" data-mode="yearly">รายปี</button>
           </div>
           
-          <div class="selectors">
-            <div class="select-container">
-              <select id="select-year" class="selector-dropdown"></select>
-            </div>
+          <div class="date-picker-container" style="position: relative;">
+            <button id="btn-date-picker" class="date-picker-btn">
+              <i data-lucide="calendar" style="width: 14px; height: 14px; margin-right: 6px; color: var(--color-primary);"></i>
+              <span id="date-picker-label">กำลังโหลดข้อมูล...</span>
+              <i data-lucide="chevron-down" class="chevron-icon" style="width: 12px; height: 12px; margin-left: 8px; color: var(--text-muted);"></i>
+            </button>
             
-            <div class="select-container">
-              <select id="select-month" class="selector-dropdown"></select>
-            </div>
-            
-            <div class="select-container">
-              <select id="select-date" class="selector-dropdown"></select>
+            <div id="calendar-popover" class="calendar-popover">
+              <div class="calendar-header">
+                <button id="btn-prev-month" class="btn-cal-nav">&lt;</button>
+                <span id="calendar-month-year"></span>
+                <button id="btn-next-month" class="btn-cal-nav">&gt;</button>
+              </div>
+              
+              <div class="calendar-weekdays">
+                <div>อา</div><div>จ</div><div>อ</div><div>พ</div><div>พฤ</div><div>ศ</div><div>ส</div>
+              </div>
+              
+              <div id="calendar-days" class="calendar-days-grid">
+                <!-- Days generated dynamically by JS -->
+              </div>
+              
+              <div class="calendar-footer">
+                <button id="btn-clear-date" class="btn btn-clear">ล้างค่า</button>
+                <button id="btn-apply-date" class="btn btn-primary">ตกลง</button>
+              </div>
             </div>
           </div>
         </div>
