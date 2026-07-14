@@ -2,9 +2,12 @@
 let state = {
   viewMode: 'daily', // daily, weekly, monthly, yearly
   activeTab: 'overview', // overview, ww, water
-  selectedYear: '2026',
-  selectedMonth: '01',
-  selectedDate: '2026-01-01',
+  startDate: '2026-01-01',
+  endDate: '2026-01-01',
+  currentCalYear: 2026,
+  currentCalMonth: 0, // 0-indexed (January)
+  tempStartDate: null,
+  tempEndDate: null,
   dataSource: 'preloaded',
   liveUrl: '',
   allData: []
@@ -397,88 +400,150 @@ function processDataAndRender() {
     }
   }
   
-  if (!defaultRec && state.allData.length > 0) {
-    defaultRec = state.allData[state.allData.length - 1];
-  }
-
   if (defaultRec && defaultRec.date) {
-    state.selectedDate = defaultRec.date;
-    const parts = defaultRec.date.split('-');
-    state.selectedYear = parts[0];
-    state.selectedMonth = parts[1];
+    if (!state.startDate || state.startDate === '2026-01-01') {
+      state.startDate = defaultRec.date;
+      state.endDate = defaultRec.date;
+    }
+    
+    // Sync calendar display to selected start date
+    const parts = state.startDate.split('-');
+    state.currentCalYear = parseInt(parts[0]);
+    state.currentCalMonth = parseInt(parts[1]) - 1;
   }
   
-  // 2. Populate and sync Year dropdown
-  populateYearDropdown();
-  const selectYear = document.getElementById('select-year');
-  if (state.selectedYear) {
-    selectYear.value = state.selectedYear;
-  }
-  
-  // 3. Populate and sync Month dropdown (depends on selected year)
-  populateMonthDropdown();
-  const selectMonth = document.getElementById('select-month');
-  if (state.selectedMonth) {
-    selectMonth.value = state.selectedMonth;
-  }
-  
-  // 4. Populate and sync Date dropdown (depends on selected year and month)
-  populateDateDropdown();
-  const selectDate = document.getElementById('select-date');
-  if (state.selectedDate) {
-    selectDate.value = state.selectedDate;
-  }
-  
+  updateDatePickerLabel();
+  renderCalendar();
   updateDashboard();
 }
 
-// 2. Dropdown Population
-function populateYearDropdown() {
-  const select = document.getElementById('select-year');
-  select.innerHTML = '';
-  const years = [...new Set(state.allData.map(r => r.date.split('-')[0]))].sort();
-  years.forEach(y => {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = 'ปี ' + (parseInt(y) + 543);
-    select.appendChild(opt);
-  });
+// 2. Custom Date Range Popover Calendar
+function updateDatePickerLabel() {
+  const label = document.getElementById('date-picker-label');
+  if (!state.startDate) {
+    label.textContent = 'เลือกช่วงวันที่...';
+    return;
+  }
+  
+  if (state.startDate === state.endDate) {
+    label.textContent = formatThaiDatePickerDate(state.startDate);
+  } else {
+    label.textContent = `${formatThaiDatePickerDate(state.startDate)} - ${formatThaiDatePickerDate(state.endDate)}`;
+  }
 }
 
-function populateMonthDropdown() {
-  const select = document.getElementById('select-month');
-  select.innerHTML = '';
-  const activeYear = document.getElementById('select-year').value || state.selectedYear;
-  const months = [...new Set(state.allData
-    .filter(r => r.date.startsWith(activeYear))
-    .map(r => r.date.split('-')[1])
-  )].sort();
-  
-  months.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = THAI_MONTHS_FULL[m] || m;
-    select.appendChild(opt);
-  });
+function formatThaiDatePickerDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const y = parseInt(parts[0]) + 543;
+  const m = THAI_MONTHS_SHORT[parts[1]] || parts[1];
+  const d = parseInt(parts[2]);
+  return `${d} ${m} ${y}`;
 }
 
-function populateDateDropdown() {
-  const select = document.getElementById('select-date');
-  select.innerHTML = '';
-  const activeYear = document.getElementById('select-year').value || state.selectedYear;
-  const activeMonth = document.getElementById('select-month').value || state.selectedMonth;
+function renderCalendar() {
+  const monthYearSpan = document.getElementById('calendar-month-year');
+  const daysGrid = document.getElementById('calendar-days');
   
-  const dates = state.allData
-    .filter(r => r.date.startsWith(`${activeYear}-${activeMonth}`))
-    .map(r => r.date)
-    .sort();
+  if (!monthYearSpan || !daysGrid) return;
+  
+  monthYearSpan.textContent = `${THAI_MONTHS_FULL[String(state.currentCalMonth + 1).padStart(2, '0')]} ${state.currentCalYear + 543}`;
+  daysGrid.innerHTML = '';
+  
+  const firstDay = new Date(state.currentCalYear, state.currentCalMonth, 1).getDay();
+  const totalDays = new Date(state.currentCalYear, state.currentCalMonth + 1, 0).getDate();
+  
+  // Empty slots at start
+  for (let i = 0; i < firstDay; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'calendar-day empty';
+    daysGrid.appendChild(cell);
+  }
+  
+  // Generate days
+  for (let d = 1; d <= totalDays; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'calendar-day selectable';
+    cell.textContent = d;
     
-  dates.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = formatShortDate(d);
-    select.appendChild(opt);
-  });
+    const mStr = String(state.currentCalMonth + 1).padStart(2, '0');
+    const dStr = String(d).padStart(2, '0');
+    const curDateStr = `${state.currentCalYear}-${mStr}-${dStr}`;
+    
+    // Check if within our dataset range (2026-01-01 to latest active date)
+    const latestDateRec = state.allData[state.allData.length - 1];
+    const latestDateStr = latestDateRec ? latestDateRec.date : '2026-12-31';
+    const withinRange = curDateStr >= '2026-01-01' && curDateStr <= latestDateStr;
+    
+    if (!withinRange) {
+      cell.classList.add('disabled');
+    } else {
+      // Check if day has actual data
+      const rec = state.allData.find(r => r.date === curDateStr);
+      const hasData = rec && (
+        (rec.ww_qty_p1 > 0 || rec.ww_qty_p2 > 0 || rec.w_qty_p100 > 0 || rec.w_qty_p150 > 0 || rec.raw_qty_p1 > 0 || rec.raw_qty_p2 > 0 || rec.raw_qty_p3 > 0) ||
+        (rec.turb_raw !== null || rec.turb_tap !== null || rec.chlorine !== null || rec.ph_raw !== null || rec.ph_tap !== null || rec.cod_sump !== null || rec.cod_post !== null || rec.cod_online !== null || rec.bod_online !== null)
+      );
+      if (hasData) {
+        cell.classList.add('day-has-data');
+      }
+      
+      // Styling selected dates
+      const isStart = state.startDate === curDateStr;
+      const isEnd = state.endDate === curDateStr;
+      const inRange = state.startDate && state.endDate && curDateStr > state.startDate && curDateStr < state.endDate;
+      
+      if (isStart && isEnd) {
+        cell.classList.add('selected');
+      } else if (isStart) {
+        cell.classList.add('range-start');
+      } else if (isEnd) {
+        cell.classList.add('range-end');
+      } else if (inRange) {
+        cell.classList.add('in-range');
+      }
+      
+      // Hover selection preview
+      if (state.startDate && !state.endDate && state.tempHoverDate) {
+        if (curDateStr > state.startDate && curDateStr <= state.tempHoverDate) {
+          cell.classList.add('in-range');
+          if (curDateStr === state.tempHoverDate) {
+            cell.classList.add('range-end');
+          }
+        }
+      }
+      
+      cell.addEventListener('click', () => handleCalDayClick(curDateStr));
+      
+      cell.addEventListener('mouseenter', () => {
+        if (state.startDate && !state.endDate) {
+          state.tempHoverDate = curDateStr;
+          renderCalendar();
+        }
+      });
+    }
+    
+    daysGrid.appendChild(cell);
+  }
+}
+
+function handleCalDayClick(dateStr) {
+  if (!state.startDate || (state.startDate && state.endDate)) {
+    state.startDate = dateStr;
+    state.endDate = null;
+    state.tempHoverDate = null;
+  } else {
+    if (dateStr < state.startDate) {
+      state.startDate = dateStr;
+      state.endDate = null;
+    } else {
+      state.endDate = dateStr;
+    }
+    state.tempHoverDate = null;
+  }
+  renderCalendar();
+  updateDatePickerLabel();
 }
 
 // 3. Event Listeners
@@ -489,46 +554,86 @@ function setupEventListeners() {
       document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
       e.target.classList.add('active');
       state.viewMode = e.target.dataset.mode;
-      
-      const monthContainer = document.getElementById('select-month').parentNode;
-      const dateContainer = document.getElementById('select-date').parentNode;
-      
-      if (state.viewMode === 'yearly') {
-        monthContainer.style.display = 'none';
-        dateContainer.style.display = 'none';
-      } else if (state.viewMode === 'monthly') {
-        monthContainer.style.display = 'block';
-        dateContainer.style.display = 'none';
-      } else {
-        monthContainer.style.display = 'block';
-        dateContainer.style.display = 'block';
-      }
-      
       updateDashboard();
     });
   });
 
-  // Selectors Change Events
-  document.getElementById('select-year').addEventListener('change', (e) => {
-    state.selectedYear = e.target.value;
-    populateMonthDropdown();
-    populateDateDropdown();
-    state.selectedMonth = document.getElementById('select-month').value || '01';
-    state.selectedDate = document.getElementById('select-date').value || `${state.selectedYear}-${state.selectedMonth}-01`;
+  // Popover Calendar controls
+  document.getElementById('btn-prev-month').addEventListener('click', () => {
+    state.currentCalMonth--;
+    if (state.currentCalMonth < 0) {
+      state.currentCalMonth = 11;
+      state.currentCalYear--;
+    }
+    renderCalendar();
+  });
+  
+  document.getElementById('btn-next-month').addEventListener('click', () => {
+    state.currentCalMonth++;
+    if (state.currentCalMonth > 11) {
+      state.currentCalMonth = 0;
+      state.currentCalYear++;
+    }
+    renderCalendar();
+  });
+  
+  document.getElementById('btn-apply-date').addEventListener('click', () => {
+    if (state.startDate) {
+      if (!state.endDate) {
+        state.endDate = state.startDate; // Single day selection
+      }
+      updateDatePickerLabel();
+      document.getElementById('calendar-popover').classList.remove('open');
+      document.getElementById('btn-date-picker').classList.remove('active');
+      updateDashboard();
+    }
+  });
+  
+  document.getElementById('btn-clear-date').addEventListener('click', () => {
+    state.startDate = null;
+    state.endDate = null;
+    state.tempHoverDate = null;
+    
+    // Fallback to latest date with data
+    let defaultRec = null;
+    for (let i = state.allData.length - 1; i >= 0; i--) {
+      const rec = state.allData[i];
+      const hasData = (rec.ww_qty_p1 > 0 || rec.ww_qty_p2 > 0 || rec.w_qty_p100 > 0 || rec.w_qty_p150 > 0 || rec.raw_qty_p1 > 0 || rec.raw_qty_p2 > 0 || rec.raw_qty_p3 > 0);
+      if (hasData) { defaultRec = rec; break; }
+    }
+    if (defaultRec) {
+      state.startDate = defaultRec.date;
+      state.endDate = defaultRec.date;
+    }
+    renderCalendar();
+    updateDatePickerLabel();
     updateDashboard();
   });
 
-  document.getElementById('select-month').addEventListener('change', (e) => {
-    state.selectedMonth = e.target.value;
-    populateDateDropdown();
-    state.selectedDate = document.getElementById('select-date').value || `${state.selectedYear}-${state.selectedMonth}-01`;
-    updateDashboard();
-  });
-
-  document.getElementById('select-date').addEventListener('change', (e) => {
-    state.selectedDate = e.target.value;
-    updateDashboard();
-  });
+  const pickerBtn = document.getElementById('btn-date-picker');
+  const popover = document.getElementById('calendar-popover');
+  
+  if (pickerBtn && popover) {
+    pickerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = popover.classList.contains('open');
+      if (isOpen) {
+        popover.classList.remove('open');
+        pickerBtn.classList.remove('active');
+      } else {
+        popover.classList.add('open');
+        pickerBtn.classList.add('active');
+        renderCalendar();
+      }
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!popover.contains(e.target) && !pickerBtn.contains(e.target)) {
+        popover.classList.remove('open');
+        pickerBtn.classList.remove('active');
+      }
+    });
+  }
 
   // Data Source Selectors
   document.getElementById('btn-source-preloaded').addEventListener('click', () => setDataSource('preloaded'));
@@ -606,9 +711,8 @@ window.switchTab = function(tabName) {
 // 5. Update UI Components
 function updateDashboard() {
   const filtered = getFilteredData();
-  const currentRecord = state.allData.find(r => r.date === state.selectedDate) || {};
-  
-  // In daily mode, show daily values. In aggregated mode, show aggregated values.
+  const isSingleDay = state.startDate === state.endDate;
+  const currentRecord = isSingleDay ? (state.allData.find(r => r.date === state.startDate) || {}) : filtered.aggregatedRecord;
   const activeRecord = (state.viewMode === 'daily') ? currentRecord : filtered.aggregatedRecord;
 
   updateKPIs(filtered.data, activeRecord);
@@ -618,18 +722,19 @@ function updateDashboard() {
 
 // 6. Filter & Aggregate Data
 function getFilteredData() {
-  const year = state.selectedYear;
-  const month = state.selectedMonth;
-  const date = state.selectedDate;
+  const start = state.startDate;
+  const end = state.endDate;
+  
+  // 1. Get raw records in range
+  const rangeRecords = state.allData.filter(r => r.date >= start && r.date <= end);
   
   let data = [];
   let chartData = [];
   let aggregatedRecord = {};
   
   if (state.viewMode === 'daily') {
-    // Show data for the selected month to give context in daily charts
-    data = state.allData.filter(r => r.date.startsWith(`${year}-${month}`));
-    chartData = data.map(r => ({
+    data = rangeRecords;
+    chartData = rangeRecords.map(r => ({
       x: formatShortDate(r.date),
       rawX: r.date,
       ww_qty_p1: r.ww_qty_p1,
@@ -655,108 +760,72 @@ function getFilteredData() {
       chlorine: r.chlorine,
       water_loss_pct: r.water_loss_pct
     }));
+    
+    aggregatedRecord = computePeriodStats(rangeRecords);
+    if (start === end) {
+      aggregatedRecord.dateLabel = `ข้อมูลประจำวันที่ ${formatThaiDateFull(start)}`;
+    } else {
+      aggregatedRecord.dateLabel = `ข้อมูลช่วงวันที่ ${formatThaiDateFull(start)} ถึง ${formatThaiDateFull(end)}`;
+    }
   } 
   
   else if (state.viewMode === 'weekly') {
-    // Filter data for the selected month of the active year only
-    const monthData = state.allData.filter(r => r.date.startsWith(`${year}-${month}`));
-    
-    // Group into Week 1 (day 1-7), Week 2 (day 8-14), Week 3 (day 15-21), Week 4 (day 22-28), Week 5 (day 29+)
-    const weeklyGroups = {
-      'Week 1': [],
-      'Week 2': [],
-      'Week 3': [],
-      'Week 4': []
-    };
-    
-    // Check if the month has days > 28, if so, add Week 5
-    const monthDaysCount = monthData.length;
-    if (monthDaysCount > 28) {
-      weeklyGroups['Week 5'] = [];
-    }
-    
-    monthData.forEach(r => {
-      const parts = r.date.split('-');
-      if (parts.length < 3) return;
-      const day = parseInt(parts[2]);
-      
-      if (day >= 1 && day <= 7) {
-        weeklyGroups['Week 1'].push(r);
-      } else if (day >= 8 && day <= 14) {
-        weeklyGroups['Week 2'].push(r);
-      } else if (day >= 15 && day <= 21) {
-        weeklyGroups['Week 3'].push(r);
-      } else if (day >= 22 && day <= 28) {
-        weeklyGroups['Week 4'].push(r);
-      } else if (day >= 29) {
-        if (weeklyGroups['Week 5']) {
-          weeklyGroups['Week 5'].push(r);
-        } else {
-          weeklyGroups['Week 4'].push(r);
-        }
-      }
+    const weeklyGroups = {};
+    rangeRecords.forEach(r => {
+      const wk = getYearWeek(r.date);
+      if (!weeklyGroups[wk]) weeklyGroups[wk] = [];
+      weeklyGroups[wk].push(r);
     });
     
-    // Convert to aggregated chart data list
-    const activeWeeks = Object.keys(weeklyGroups);
-    chartData = activeWeeks.map(wk => {
+    const sortedWeeks = Object.keys(weeklyGroups).sort();
+    chartData = sortedWeeks.map(wk => {
       const group = weeklyGroups[wk];
       const stats = computePeriodStats(group);
+      const parts = wk.split('-W');
+      const yr = parseInt(parts[0]) + 543;
+      const wkNum = parseInt(parts[1]);
       return {
-        x: wk,
+        x: `สัปดาห์ที่ ${wkNum} (${yr})`,
         rawX: wk,
         ...stats
       };
     });
     
     data = chartData;
-    
-    // Determine which week group the selected date belongs to
-    const selectedParts = date.split('-');
-    const selectedDay = parseInt(selectedParts[2]);
-    let activeWk = 'Week 1';
-    if (selectedDay >= 1 && selectedDay <= 7) activeWk = 'Week 1';
-    else if (selectedDay >= 8 && selectedDay <= 14) activeWk = 'Week 2';
-    else if (selectedDay >= 15 && selectedDay <= 21) activeWk = 'Week 3';
-    else if (selectedDay >= 22 && selectedDay <= 28) activeWk = 'Week 4';
-    else if (selectedDay >= 29) activeWk = weeklyGroups['Week 5'] ? 'Week 5' : 'Week 4';
-    
-    const targetGroup = weeklyGroups[activeWk] || [];
-    aggregatedRecord = computePeriodStats(targetGroup);
-    aggregatedRecord.dateLabel = `สัปดาห์ ${activeWk} ของเดือน${THAI_MONTHS_FULL[month]} พ.ศ. ${parseInt(year) + 543}`;
+    aggregatedRecord = computePeriodStats(rangeRecords);
+    aggregatedRecord.dateLabel = `ข้อมูลรายสัปดาห์ ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
   } 
   
   else if (state.viewMode === 'monthly') {
-    // Monthly aggregation
-    const yearData = state.allData.filter(r => r.date.startsWith(year));
     const monthlyGroups = {};
-    yearData.forEach(r => {
-      const m = r.date.split('-')[1];
-      if (!monthlyGroups[m]) monthlyGroups[m] = [];
-      monthlyGroups[m].push(r);
+    rangeRecords.forEach(r => {
+      const mStr = r.date.substring(0, 7);
+      if (!monthlyGroups[mStr]) monthlyGroups[mStr] = [];
+      monthlyGroups[mStr].push(r);
     });
     
     const sortedMonths = Object.keys(monthlyGroups).sort();
-    chartData = sortedMonths.map(m => {
-      const group = monthlyGroups[m];
+    chartData = sortedMonths.map(mStr => {
+      const group = monthlyGroups[mStr];
       const stats = computePeriodStats(group);
+      const parts = mStr.split('-');
+      const y = parts[0];
+      const m = parts[1];
       return {
-        x: `${THAI_MONTHS_SHORT[m]} ${String(parseInt(year) - 2000 + 43)}`,
-        rawX: m,
+        x: `${THAI_MONTHS_SHORT[m]} ${String(parseInt(y) - 2000 + 43)}`,
+        rawX: mStr,
         ...stats
       };
     });
     
     data = chartData;
-    const targetGroup = monthlyGroups[month] || [];
-    aggregatedRecord = computePeriodStats(targetGroup);
-    aggregatedRecord.dateLabel = `เดือน ${THAI_MONTHS_FULL[month]} พ.ศ. ${parseInt(year) + 543}`;
+    aggregatedRecord = computePeriodStats(rangeRecords);
+    aggregatedRecord.dateLabel = `ข้อมูลรายเดือน ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
   } 
   
   else if (state.viewMode === 'yearly') {
-    // Yearly aggregation
     const yearlyGroups = {};
-    state.allData.forEach(r => {
+    rangeRecords.forEach(r => {
       const y = r.date.split('-')[0];
       if (!yearlyGroups[y]) yearlyGroups[y] = [];
       yearlyGroups[y].push(r);
@@ -774,12 +843,31 @@ function getFilteredData() {
     });
     
     data = chartData;
-    const targetGroup = yearlyGroups[year] || [];
-    aggregatedRecord = computePeriodStats(targetGroup);
-    aggregatedRecord.dateLabel = `ปี พ.ศ. ${parseInt(year) + 543}`;
+    aggregatedRecord = computePeriodStats(rangeRecords);
+    aggregatedRecord.dateLabel = `ข้อมูลรายปี ช่วง ${formatThaiDateFull(start)} - ${formatThaiDateFull(end)}`;
   }
   
   return { data, chartData, aggregatedRecord };
+}
+
+function getYearWeek(dateStr) {
+  const date = new Date(dateStr);
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+}
+
+function formatThaiDateFull(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const y = parseInt(parts[0]) + 543;
+  const m = THAI_MONTHS_FULL[parts[1]] || parts[1];
+  const d = parseInt(parts[2]);
+  return `${d} ${m} พ.ศ. ${y}`;
 }
 
 // 7. Core Calculations Helper
@@ -955,7 +1043,7 @@ function formatVal(val, decimals = 1) {
 // 9. Update Unified Daily Text Report Card
 function updateUnifiedReportWidget(rec) {
   // Date Label
-  const label = rec.dateLabel || ('ข้อมูลประจำวันที่ ' + formatShortDate(state.selectedDate));
+  const label = rec.dateLabel || ('ข้อมูลประจำวันที่ ' + formatShortDate(state.startDate));
   document.getElementById('report-date-label').textContent = label;
   
   // 1. ปริมาณน้ำดิบรวม
