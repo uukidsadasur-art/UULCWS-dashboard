@@ -1537,7 +1537,23 @@ function showToast(msg, type = 'success') {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js')
-      .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+      .then(reg => {
+        console.log('Service Worker registered successfully:', reg.scope);
+        // Force update check on every load
+        reg.update();
+        
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast("ตรวจพบฟังก์ชันใหม่! กำลังอัปเดตแดชบอร์ด...", "success");
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            }
+          });
+        });
+      })
       .catch(err => console.log('Service Worker registration failed:', err));
   });
 }
