@@ -1254,9 +1254,23 @@ function updateCharts(chartData) {
       dashArray: [0, 5] // line series is dashed
     },
     plotOptions: {
-      bar: { columnWidth: '45%', borderRadius: 3 }
+      bar: {
+        columnWidth: '45%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
     },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      enabledOnSeries: [0],
+      offsetY: -18,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'ลบ.ม. / ช่วงเวลา' }
@@ -1290,9 +1304,22 @@ function updateCharts(chartData) {
     },
     colors: ['#d97706'],
     plotOptions: {
-      bar: { columnWidth: '40%', borderRadius: 3 }
+      bar: {
+        columnWidth: '40%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
     },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      offsetY: -18,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'COD (mg/L)' },
@@ -1329,9 +1356,22 @@ function updateCharts(chartData) {
     },
     colors: ['#b45309'],
     plotOptions: {
-      bar: { columnWidth: '40%', borderRadius: 3 }
+      bar: {
+        columnWidth: '40%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
     },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      offsetY: -18,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'COD (mg/L)' },
@@ -1380,9 +1420,23 @@ function updateCharts(chartData) {
       dashArray: [0, 5]
     },
     plotOptions: {
-      bar: { columnWidth: '45%', borderRadius: 3 }
+      bar: {
+        columnWidth: '45%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
     },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      enabledOnSeries: [0],
+      offsetY: -18,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: { title: { text: 'ลบ.ม. / ช่วงเวลา' } },
     tooltip: {
@@ -1414,9 +1468,22 @@ function updateCharts(chartData) {
     },
     colors: ['#0d9488'],
     plotOptions: {
-      bar: { columnWidth: '40%', borderRadius: 3 }
+      bar: {
+        columnWidth: '40%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
     },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      offsetY: -18,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: { title: { text: 'ปริมาณน้ำดิบ (ลบ.ม.)' } },
     tooltip: {
@@ -1448,7 +1515,14 @@ function updateCharts(chartData) {
     },
     colors: ['#0284c7'],
     stroke: { width: 3 },
-    dataLabels: { enabled: state.showDataLabels },
+    dataLabels: {
+      enabled: state.showDataLabels,
+      offsetY: -6,
+      style: {
+        fontSize: '9px',
+        colors: ['#000000']
+      }
+    },
     xaxis: { categories: categories },
     yaxis: {
       min: 4,
