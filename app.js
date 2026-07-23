@@ -8,6 +8,7 @@ let state = {
   currentCalMonth: 0, // 0-indexed (January)
   tempStartDate: null,
   tempEndDate: null,
+  showDataLabels: false,
   dataSource: 'preloaded',
   liveUrl: '',
   allData: []
@@ -707,9 +708,39 @@ function setupEventListeners() {
       modal.classList.remove('open');
     }
   });
+
+  // Toggle Data Labels
+  const btnToggleLabels = document.getElementById('btn-toggle-labels');
+  if (btnToggleLabels) {
+    btnToggleLabels.addEventListener('click', () => {
+      state.showDataLabels = !state.showDataLabels;
+      updateLabelsToggleUI();
+      const filtered = getFilteredData();
+      updateCharts(filtered.chartData);
+    });
+  }
 }
 
 function initUI() {
+  lucide.createIcons();
+  updateLabelsToggleUI();
+}
+
+function updateLabelsToggleUI() {
+  const btn = document.getElementById('btn-toggle-labels');
+  if (!btn) return;
+  const icon = btn.querySelector('i');
+  const text = btn.querySelector('span');
+  
+  if (state.showDataLabels) {
+    btn.classList.add('btn-primary');
+    if (icon) icon.setAttribute('data-lucide', 'eye-off');
+    if (text) text.textContent = 'ซ่อนตัวเลขบนกราฟ';
+  } else {
+    btn.classList.remove('btn-primary');
+    if (icon) icon.setAttribute('data-lucide', 'eye');
+    if (text) text.textContent = 'แสดงตัวเลขบนกราฟ';
+  }
   lucide.createIcons();
 }
 
@@ -1225,7 +1256,7 @@ function updateCharts(chartData) {
     plotOptions: {
       bar: { columnWidth: '45%', borderRadius: 3 }
     },
-    dataLabels: { enabled: false }, // Turn off numbers on bars
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'ลบ.ม. / ช่วงเวลา' }
@@ -1261,7 +1292,7 @@ function updateCharts(chartData) {
     plotOptions: {
       bar: { columnWidth: '40%', borderRadius: 3 }
     },
-    dataLabels: { enabled: false },
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'COD (mg/L)' },
@@ -1300,7 +1331,7 @@ function updateCharts(chartData) {
     plotOptions: {
       bar: { columnWidth: '40%', borderRadius: 3 }
     },
-    dataLabels: { enabled: false },
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: {
       title: { text: 'COD (mg/L)' },
@@ -1351,7 +1382,7 @@ function updateCharts(chartData) {
     plotOptions: {
       bar: { columnWidth: '45%', borderRadius: 3 }
     },
-    dataLabels: { enabled: false },
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: { title: { text: 'ลบ.ม. / ช่วงเวลา' } },
     tooltip: {
@@ -1385,7 +1416,7 @@ function updateCharts(chartData) {
     plotOptions: {
       bar: { columnWidth: '40%', borderRadius: 3 }
     },
-    dataLabels: { enabled: false },
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: { title: { text: 'ปริมาณน้ำดิบ (ลบ.ม.)' } },
     tooltip: {
@@ -1417,7 +1448,7 @@ function updateCharts(chartData) {
     },
     colors: ['#0284c7'],
     stroke: { width: 3 },
-    dataLabels: { enabled: false },
+    dataLabels: { enabled: state.showDataLabels },
     xaxis: { categories: categories },
     yaxis: {
       min: 4,
