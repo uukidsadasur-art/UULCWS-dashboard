@@ -1263,7 +1263,11 @@ function updateCharts(chartData) {
     },
     dataLabels: { enabled: false },
     xaxis: { categories: categories },
-    yaxis: { title: { text: 'COD (mg/L)' } },
+    yaxis: {
+      title: { text: 'COD (mg/L)' },
+      min: 0,
+      max: Math.max(...chartData.map(c => c.cod_sump || 0), 800)
+    },
     annotations: {
       yaxis: [{
         y: STANDARDS.codSumpMax,
@@ -1298,7 +1302,11 @@ function updateCharts(chartData) {
     },
     dataLabels: { enabled: false },
     xaxis: { categories: categories },
-    yaxis: { title: { text: 'COD (mg/L)' } },
+    yaxis: {
+      title: { text: 'COD (mg/L)' },
+      min: 0,
+      max: Math.max(...chartData.map(c => c.cod_post || 0), 150)
+    },
     annotations: {
       yaxis: [{
         y: STANDARDS.codPostMax,
