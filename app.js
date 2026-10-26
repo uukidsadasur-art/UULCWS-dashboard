@@ -11,8 +11,111 @@ let state = {
   showDataLabels: false,
   dataSource: 'preloaded',
   liveUrl: '',
-  allData: []
+  allData: [],
+  wwQualSelected: ['cod_sump', 'cod_post'],
+  waterQualSelected: ['turb_raw', 'turb_tap', 'ph_raw', 'ph_tap', 'chlorine'],
+  wwQualScope: 'filter',     // 'filter' | 'month'
+  waterQualScope: 'filter',  // 'filter' | 'month'
+  wwQualDisplay: 'both',     // 'both' | 'table' | 'chart'
+  waterQualDisplay: 'both'   // 'both' | 'table' | 'chart'
 };
+
+// Water Quality Parameters Metadata (Separated for Wastewater & Tap Water)
+const WW_QUAL_PARAMS = [
+  {
+    key: 'cod_sump',
+    label: 'ค่า COD บ่อ Collecting Sump',
+    shortLabel: 'COD Collecting Sump',
+    unit: 'mg/L',
+    decimals: 1,
+    color: '#d97706',
+    stdText: 'เกณฑ์ ≤ 750 mg/L',
+    isOk: (v) => v <= 750
+  },
+  {
+    key: 'cod_post',
+    label: 'ค่า COD บ่อ Post Aeration (Lab)',
+    shortLabel: 'COD Post Aeration (Lab)',
+    unit: 'mg/L',
+    decimals: 1,
+    color: '#059669',
+    stdText: 'เกณฑ์ ≤ 120 mg/L',
+    isOk: (v) => v <= 120
+  },
+  {
+    key: 'cod_online',
+    label: 'ค่า COD Online (Post Aeration)',
+    shortLabel: 'COD Online (Post)',
+    unit: 'mg/L',
+    decimals: 1,
+    color: '#2563eb',
+    stdText: 'เกณฑ์ ≤ 120 mg/L',
+    isOk: (v) => v <= 120
+  },
+  {
+    key: 'bod_online',
+    label: 'ค่า BOD Online (Post Aeration)',
+    shortLabel: 'BOD Online (Post)',
+    unit: 'mg/L',
+    decimals: 1,
+    color: '#7c3aed',
+    stdText: 'เกณฑ์ ≤ 20 mg/L',
+    isOk: (v) => v <= 20
+  }
+];
+
+const WATER_QUAL_PARAMS = [
+  {
+    key: 'turb_raw',
+    label: 'ความขุ่น น้ำดิบ',
+    shortLabel: 'ความขุ่น น้ำดิบ',
+    unit: 'NTU',
+    decimals: 2,
+    color: '#0d9488',
+    stdText: 'หน่วย NTU',
+    isOk: null
+  },
+  {
+    key: 'turb_tap',
+    label: 'ความขุ่น น้ำประปา',
+    shortLabel: 'ความขุ่น น้ำประปา',
+    unit: 'NTU',
+    decimals: 2,
+    color: '#0284c7',
+    stdText: 'เกณฑ์ ≤ 4.0 NTU',
+    isOk: (v) => v <= 4.0
+  },
+  {
+    key: 'ph_raw',
+    label: 'ค่า pH น้ำดิบ',
+    shortLabel: 'pH น้ำดิบ',
+    unit: 'pH',
+    decimals: 2,
+    color: '#6366f1',
+    stdText: 'เกณฑ์ 6.0 - 9.0',
+    isOk: (v) => v >= 6.0 && v <= 9.0
+  },
+  {
+    key: 'ph_tap',
+    label: 'ค่า pH น้ำประปา',
+    shortLabel: 'pH น้ำประปา',
+    unit: 'pH',
+    decimals: 2,
+    color: '#2563eb',
+    stdText: 'เกณฑ์ 6.5 - 8.5',
+    isOk: (v) => v >= 6.5 && v <= 8.5
+  },
+  {
+    key: 'chlorine',
+    label: 'คลอรีนคงเหลือ น้ำประปา',
+    shortLabel: 'คลอรีน น้ำประปา',
+    unit: 'mg/L',
+    decimals: 2,
+    color: '#10b981',
+    stdText: 'เกณฑ์ 0.2 - 2.0 mg/L',
+    isOk: (v) => v >= 0.2 && v <= 2.0
+  }
+];
 
 // Global Chart instances
 let charts = {};
@@ -717,11 +820,14 @@ function setupEventListeners() {
       updateLabelsToggleUI();
       const filtered = getFilteredData();
       updateCharts(filtered.chartData);
+      updateQualityCompareSection('ww', filtered.chartData);
+      updateQualityCompareSection('water', filtered.chartData);
     });
   }
 }
 
 function initUI() {
+  initQualityCompareUI();
   lucide.createIcons();
   updateLabelsToggleUI();
 }
@@ -798,6 +904,8 @@ function updateDashboard() {
   updateKPIs(filtered.data, activeRecord);
   updateCharts(filtered.chartData);
   updateUnifiedReportWidget(activeRecord);
+  updateQualityCompareSection('ww', filtered.chartData);
+  updateQualityCompareSection('water', filtered.chartData);
 }
 
 // 6. Filter & Aggregate Data
@@ -1590,6 +1698,272 @@ function renderChart(containerId, options) {
       charts[containerId] = new ApexCharts(el, options);
       charts[containerId].render();
     }
+  }
+}
+
+// =========================================================
+// 10.7 Multi-Parameter Water Quality Comparison (WW & Tap Water)
+// =========================================================
+function initQualityCompareUI() {
+  setupPlantQualityControls('ww', WW_QUAL_PARAMS);
+  setupPlantQualityControls('water', WATER_QUAL_PARAMS);
+}
+
+function setupPlantQualityControls(plant, paramConfigs) {
+  const listEl = document.getElementById(`${plant}-qual-param-list`);
+  const selectAllBtn = document.getElementById(`btn-${plant}-qual-select-all`);
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+  const selectedKey = plant === 'ww' ? 'wwQualSelected' : 'waterQualSelected';
+
+  paramConfigs.forEach(p => {
+    const isChecked = state[selectedKey].includes(p.key);
+    const chip = document.createElement('div');
+    chip.className = `qual-param-chip ${isChecked ? 'active' : ''}`;
+    chip.dataset.key = p.key;
+    chip.style.setProperty('--chip-color', p.color);
+    chip.innerHTML = `
+      <span class="qual-chip-check">${isChecked ? '✓' : ''}</span>
+      <span>${p.label}</span>
+    `;
+    chip.addEventListener('click', () => {
+      const idx = state[selectedKey].indexOf(p.key);
+      if (idx > -1) {
+        if (state[selectedKey].length <= 1) {
+          showToast('กรุณาเลือกอย่างน้อย 1 ค่าคุณภาพน้ำเพื่อแสดงผล', 'error');
+          return;
+        }
+        state[selectedKey].splice(idx, 1);
+      } else {
+        // Keep original parameter order
+        const nextSet = new Set([...state[selectedKey], p.key]);
+        state[selectedKey] = paramConfigs.map(cfg => cfg.key).filter(k => nextSet.has(k));
+      }
+      const filtered = getFilteredData();
+      updateQualityCompareSection(plant, filtered.chartData);
+    });
+    listEl.appendChild(chip);
+  });
+
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      state[selectedKey] = paramConfigs.map(cfg => cfg.key);
+      const filtered = getFilteredData();
+      updateQualityCompareSection(plant, filtered.chartData);
+    });
+  }
+
+  // Scope tabs (filter vs month)
+  document.querySelectorAll(`.qual-scope-tabs[data-plant="${plant}"] .qual-scope-btn`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`.qual-scope-tabs[data-plant="${plant}"] .qual-scope-btn`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (plant === 'ww') state.wwQualScope = btn.dataset.scope;
+      else state.waterQualScope = btn.dataset.scope;
+      const filtered = getFilteredData();
+      updateQualityCompareSection(plant, filtered.chartData);
+    });
+  });
+
+  // Display mode tabs (both / table / chart)
+  document.querySelectorAll(`.qual-display-tabs[data-plant="${plant}"] .qual-display-btn`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`.qual-display-tabs[data-plant="${plant}"] .qual-display-btn`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (plant === 'ww') state.wwQualDisplay = btn.dataset.display;
+      else state.waterQualDisplay = btn.dataset.display;
+      const filtered = getFilteredData();
+      updateQualityCompareSection(plant, filtered.chartData);
+    });
+  });
+}
+
+function getQualityCompareDataset(plant, baseChartData) {
+  const scope = plant === 'ww' ? state.wwQualScope : state.waterQualScope;
+  if (scope === 'month' && state.startDate) {
+    const parts = state.startDate.split('-');
+    const yearMonth = `${parts[0]}-${parts[1]}`;
+    const paramConfigs = plant === 'ww' ? WW_QUAL_PARAMS : WATER_QUAL_PARAMS;
+    const monthRecords = state.allData.filter(r => {
+      if (!r.date || !r.date.startsWith(yearMonth)) return false;
+      // Include days that have at least one quality metric or quantity recorded
+      return paramConfigs.some(p => r[p.key] !== null && r[p.key] !== undefined) ||
+             (r.ww_qty_total > 0 || r.w_qty_total > 0 || r.raw_qty_total > 0);
+    });
+    return monthRecords.map(r => ({
+      x: formatShortDate(r.date),
+      rawX: r.date,
+      ...r
+    }));
+  }
+  return baseChartData || [];
+}
+
+function updateQualityCompareSection(plant, baseChartData) {
+  const paramConfigs = plant === 'ww' ? WW_QUAL_PARAMS : WATER_QUAL_PARAMS;
+  const selectedKeys = plant === 'ww' ? state.wwQualSelected : state.waterQualSelected;
+  const displayMode = plant === 'ww' ? state.wwQualDisplay : state.waterQualDisplay;
+  const selectedParams = paramConfigs.filter(p => selectedKeys.includes(p.key));
+
+  // 1. Sync Chip Active States
+  const listEl = document.getElementById(`${plant}-qual-param-list`);
+  if (listEl) {
+    listEl.querySelectorAll('.qual-param-chip').forEach(chip => {
+      const k = chip.dataset.key;
+      const active = selectedKeys.includes(k);
+      chip.classList.toggle('active', active);
+      const checkSpan = chip.querySelector('.qual-chip-check');
+      if (checkSpan) checkSpan.textContent = active ? '✓' : '';
+    });
+  }
+
+  // 2. Toggle Table & Chart Visibility
+  const tableWrap = document.getElementById(`${plant}-qual-table-wrap`);
+  const chartWrap = document.getElementById(`${plant}-qual-chart-wrap`);
+  if (tableWrap) tableWrap.style.display = (displayMode === 'both' || displayMode === 'table') ? 'block' : 'none';
+  if (chartWrap) chartWrap.style.display = (displayMode === 'both' || displayMode === 'chart') ? 'block' : 'none';
+
+  const dataset = getQualityCompareDataset(plant, baseChartData);
+
+  // 3. Render Comparison Table
+  const tableEl = document.getElementById(`table-${plant}-qual`);
+  if (tableEl) {
+    const thead = tableEl.querySelector('thead');
+    const tbody = tableEl.querySelector('tbody');
+    const tfoot = tableEl.querySelector('tfoot');
+
+    thead.innerHTML = `
+      <tr>
+        <th>วันที่ / ช่วงเวลา</th>
+        ${selectedParams.map(p => `
+          <th>
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:5px;"></span>${p.label}
+            <span class="qual-th-sub">${p.stdText}</span>
+          </th>
+        `).join('')}
+      </tr>
+    `;
+
+    if (dataset.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${selectedParams.length + 1}" style="text-align:center;color:var(--text-muted);padding:1.25rem;">ไม่พบข้อมูลในช่วงเวลาที่เลือก</td></tr>`;
+      tfoot.innerHTML = '';
+    } else {
+      tbody.innerHTML = dataset.map(item => `
+        <tr>
+          <td>${item.x}</td>
+          ${selectedParams.map(p => {
+            const val = item[p.key];
+            if (val === null || val === undefined) {
+              return `<td><span style="color:var(--text-muted);">-</span></td>`;
+            }
+            const ok = p.isOk ? p.isOk(val) : true;
+            const unitSuffix = p.unit === 'pH' ? '' : ` <small style="font-weight:400;opacity:0.75;">${p.unit}</small>`;
+            return `<td><span class="qual-val-badge ${ok ? 'in-spec' : 'out-of-spec'}">${formatVal(val, p.decimals)}${unitSuffix}${!ok ? ' ⚠️' : ''}</span></td>`;
+          }).join('')}
+        </tr>
+      `).join('');
+
+      // Compute Average for Footer Row
+      tfoot.innerHTML = `
+        <tr>
+          <td>ค่าเฉลี่ย (Average)</td>
+          ${selectedParams.map(p => {
+            let sum = 0;
+            let count = 0;
+            dataset.forEach(item => {
+              const v = item[p.key];
+              if (v !== null && v !== undefined) {
+                sum += v;
+                count++;
+              }
+            });
+            if (count === 0) return `<td>-</td>`;
+            const avg = sum / count;
+            const ok = p.isOk ? p.isOk(avg) : true;
+            const unitSuffix = p.unit === 'pH' ? '' : ` <small style="font-weight:400;opacity:0.75;">${p.unit}</small>`;
+            return `<td><span class="qual-val-badge ${ok ? 'in-spec' : 'out-of-spec'}">${formatVal(avg, p.decimals)}${unitSuffix}${!ok ? ' ⚠️' : ''}</span></td>`;
+          }).join('')}
+        </tr>
+      `;
+    }
+  }
+
+  // 4. Render Side-by-Side Comparison Chart
+  if (displayMode === 'both' || displayMode === 'chart') {
+    const categories = dataset.map(d => d.x);
+    const series = selectedParams.map(p => ({
+      name: `${p.shortLabel} (${p.unit})`,
+      data: dataset.map(d => d[p.key])
+    }));
+    const colors = selectedParams.map(p => p.color);
+
+    const chartOptions = {
+      series: series,
+      chart: {
+        height: 290,
+        type: 'bar',
+        toolbar: { show: false }
+      },
+      colors: colors,
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: selectedParams.length > 2 ? '68%' : '52%',
+          borderRadius: 3,
+          dataLabels: {
+            position: 'top'
+          }
+        }
+      },
+      dataLabels: {
+        enabled: state.showDataLabels,
+        offsetY: -18,
+        style: {
+          fontSize: '9px',
+          colors: ['#000000']
+        }
+      },
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ['transparent']
+      },
+      xaxis: {
+        categories: categories
+      },
+      yaxis: {
+        title: {
+          text: plant === 'ww' ? 'ค่าคุณภาพน้ำเสีย (mg/L)' : 'ค่าคุณภาพน้ำประปา'
+        }
+      },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'left'
+      },
+      tooltip: {
+        shared: true,
+        intersect: false,
+        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+          const item = dataset[dataPointIndex];
+          if (!item) return '';
+          let rowsHtml = selectedParams.map(p => {
+            const val = item[p.key];
+            const valStr = (val === null || val === undefined) ? '-' : `${formatVal(val, p.decimals)} ${p.unit === 'pH' ? '' : p.unit}`;
+            const ok = (val !== null && val !== undefined && p.isOk) ? p.isOk(val) : true;
+            return `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+              <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:5px;"></span>${p.label}:</span>
+              <b style="color:${ok ? '#0f172a' : '#dc2626'}">${valStr}${!ok ? ' ⚠️' : ''}</b>
+            </div>`;
+          }).join('');
+          return `<div class="custom-tooltip">
+            <div style="border-bottom:1px solid #e2e8f0;margin-bottom:4px;padding-bottom:4px;"><b>วันที่ / ช่วงเวลา: ${item.x}</b></div>
+            ${rowsHtml}
+          </div>`;
+        }
+      }
+    };
+    renderChart(`chart-${plant}-qual-compare`, chartOptions);
   }
 }
 
