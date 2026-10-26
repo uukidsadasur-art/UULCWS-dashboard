@@ -16,14 +16,14 @@
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <!-- CSS Stylesheets (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
   
   <script>
-    // Force purge old Service Worker caches (v1-v5) so updated CSS/JS load immediately
+    // Force purge old Service Worker caches (v1-v6) so updated CSS/JS load immediately
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (key !== 'uulcws-cache-v6') {
+          if (key !== 'uulcws-cache-v7') {
             caches.delete(key);
           }
         });
@@ -203,9 +203,15 @@
       <!-- Control Toggles -->
       <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
         <!-- Show/Hide Data Labels Toggle -->
-        <button id="btn-toggle-labels" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: var(--radius-sm); margin-right: auto; display: flex; align-items: center; gap: 0.3rem;">
+        <button id="btn-toggle-labels" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 0.3rem;">
           <i data-lucide="eye" style="width: 13px; height: 13px;"></i> <span>แสดงตัวเลขบนกราฟ</span>
         </button>
+
+        <!-- Global Chart Type Toggle (Bar vs Line for All Charts) -->
+        <div class="chart-type-tabs global-chart-type-tabs" id="global-chart-type-tabs" style="margin-right: auto;">
+          <button class="chart-type-btn active" data-type="bar" title="เปลี่ยนทุกกราฟเป็นกราฟแท่ง">📊 กราฟแท่งทั้งหมด</button>
+          <button class="chart-type-btn" data-type="line" title="เปลี่ยนทุกกราฟเป็นกราฟเส้น">📈 กราฟเส้นทั้งหมด</button>
+        </div>
         
         <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500; margin-right: 0.25rem;">แหล่งข้อมูล:</span>
         <button id="btn-source-preloaded" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: var(--radius-sm);">
@@ -389,6 +395,10 @@
                 <h3>ปริมาณน้ำเสียเข้าระบบบำบัดรวม</h3>
                 <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,300 ลบ.ม./วัน</p>
               </div>
+              <div class="chart-type-tabs" data-chart="chart-ww-qty">
+                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              </div>
             </div>
             <div class="chart-wrapper">
               <div id="chart-ww-qty"></div>
@@ -411,6 +421,10 @@
                   <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
                   <button class="qual-display-btn" data-display="table">เฉพาะตาราง</button>
                   <button class="qual-display-btn" data-display="chart">เฉพาะกราฟ</button>
+                </div>
+                <div class="chart-type-tabs" data-chart="chart-ww-qual-compare">
+                  <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                  <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
                 </div>
               </div>
             </div>
@@ -449,6 +463,10 @@
                 <h3>ค่า COD บ่อ Collecting Sump</h3>
                 <p>เกณฑ์มาตรฐานสูงสุดไม่เกิน 750 mg/L</p>
               </div>
+              <div class="chart-type-tabs" data-chart="chart-cod-sump">
+                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              </div>
             </div>
             <div class="chart-wrapper">
               <div id="chart-cod-sump"></div>
@@ -461,6 +479,10 @@
               <div class="chart-title">
                 <h3>ค่า COD บ่อ Post Aeration (Lab)</h3>
                 <p>เกณฑ์มาตรฐานสูงสุดไม่เกิน 120 mg/L</p>
+              </div>
+              <div class="chart-type-tabs" data-chart="chart-cod-post">
+                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
               </div>
             </div>
             <div class="chart-wrapper">
@@ -483,6 +505,10 @@
                 <h3>ปริมาณน้ำจ่ายรวม</h3>
                 <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,800 ลบ.ม./วัน</p>
               </div>
+              <div class="chart-type-tabs" data-chart="chart-water-qty">
+                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              </div>
             </div>
             <div class="chart-wrapper">
               <div id="chart-water-qty"></div>
@@ -495,6 +521,10 @@
               <div class="chart-title">
                 <h3>ปริมาณน้ำดิบรวม</h3>
                 <p>ปริมาณน้ำดิบรวมเข้าระบบผลิตน้ำประปา</p>
+              </div>
+              <div class="chart-type-tabs" data-chart="chart-raw-intake">
+                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
               </div>
             </div>
             <div class="chart-wrapper">
@@ -518,6 +548,10 @@
                   <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
                   <button class="qual-display-btn" data-display="table">เฉพาะตาราง</button>
                   <button class="qual-display-btn" data-display="chart">เฉพาะกราฟ</button>
+                </div>
+                <div class="chart-type-tabs" data-chart="chart-water-qual-compare">
+                  <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                  <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
                 </div>
               </div>
             </div>
@@ -556,6 +590,10 @@
               <div class="chart-title">
                 <h3>ค่า pH น้ำดิบ (Raw Water pH)</h3>
                 <p>เกณฑ์มาตรฐานควบคุมช่วง pH 6.0 - 9.0</p>
+              </div>
+              <div class="chart-type-tabs" data-chart="chart-ph-raw">
+                <button class="chart-type-btn" data-type="bar">กราฟแท่ง</button>
+                <button class="chart-type-btn active" data-type="line">กราฟเส้น</button>
               </div>
             </div>
             <div class="chart-wrapper">
@@ -605,7 +643,7 @@
   <div id="toast-container" class="toast"></div>
 
   <!-- Javascript Logic Files (Cache-busted) -->
-  <script src="data.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="data.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
