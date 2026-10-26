@@ -1692,9 +1692,6 @@ function updateCharts(chartData) {
   };
   renderChart('chart-cod-post', codPostOptions, state.chartTypes['chart-cod-post']);
 
-  // Monthly Daily Average Info for Water Distribution & Raw Water Intake
-  const monthStats = getActiveMonthStats();
-
   // 10.4 Water Quantity (Distribution vs Contract)
   const isWaterQtyLine = state.chartTypes['chart-water-qty'] === 'line';
   const isWaterMonthAvg = state.waterQtyMode === 'month_avg';
@@ -1709,7 +1706,6 @@ function updateCharts(chartData) {
     ? monthStats.monthChartData
     : chartData;
   const wCategories = wChartDataset.map(c => c.x);
-  const isPeriodAggregated = (state.viewMode === 'monthly' || state.viewMode === 'yearly');
 
   const wQtySeries = [
     {
