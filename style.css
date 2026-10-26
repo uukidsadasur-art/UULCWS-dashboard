@@ -1093,6 +1093,12 @@ body {
   color: #0369a1;
 }
 
+.ww-avg-banner {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
 .raw-avg-banner {
   background: #f0fdfa;
   border-color: #99f6e4;
