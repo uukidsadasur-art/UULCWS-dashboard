@@ -15,8 +15,21 @@
   <meta name="apple-mobile-web-app-title" content="UULCWS Dash">
   <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="style.css">
+  <!-- CSS Stylesheets (Cache-busted) -->
+  <link rel="stylesheet" href="style.css?v=6">
+  
+  <script>
+    // Force purge old Service Worker caches (v1-v5) so updated CSS/JS load immediately
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(key) {
+          if (key !== 'uulcws-cache-v6') {
+            caches.delete(key);
+          }
+        });
+      });
+    }
+  </script>
   
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -391,8 +404,8 @@
               </div>
               <div class="qual-view-controls">
                 <div class="qual-scope-tabs" data-plant="ww">
-                  <button class="qual-scope-btn active" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
-                  <button class="qual-scope-btn" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
+                  <button class="qual-scope-btn" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
+                  <button class="qual-scope-btn active" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
                 </div>
                 <div class="qual-display-tabs" data-plant="ww">
                   <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
@@ -406,7 +419,10 @@
             <div class="qual-param-bar">
               <span class="qual-param-label">เลือกค่าที่ต้องการดู:</span>
               <div id="ww-qual-param-list" class="qual-param-list">
-                <!-- Populated by JS -->
+                <div class="qual-param-chip active" data-key="cod_sump" style="--chip-color: #d97706;"><span class="qual-chip-check">✓</span><span>ค่า COD บ่อ Collecting Sump</span></div>
+                <div class="qual-param-chip active" data-key="cod_post" style="--chip-color: #059669;"><span class="qual-chip-check">✓</span><span>ค่า COD บ่อ Post Aeration (Lab)</span></div>
+                <div class="qual-param-chip" data-key="cod_online" style="--chip-color: #2563eb;"><span class="qual-chip-check"></span><span>ค่า COD Online (Post Aeration)</span></div>
+                <div class="qual-param-chip" data-key="bod_online" style="--chip-color: #7c3aed;"><span class="qual-chip-check"></span><span>ค่า BOD Online (Post Aeration)</span></div>
               </div>
               <button id="btn-ww-qual-select-all" class="btn-qual-action">เลือกทั้งหมด</button>
             </div>
@@ -495,8 +511,8 @@
               </div>
               <div class="qual-view-controls">
                 <div class="qual-scope-tabs" data-plant="water">
-                  <button class="qual-scope-btn active" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
-                  <button class="qual-scope-btn" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
+                  <button class="qual-scope-btn" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
+                  <button class="qual-scope-btn active" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
                 </div>
                 <div class="qual-display-tabs" data-plant="water">
                   <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
@@ -510,7 +526,11 @@
             <div class="qual-param-bar">
               <span class="qual-param-label">เลือกค่าที่ต้องการดู:</span>
               <div id="water-qual-param-list" class="qual-param-list">
-                <!-- Populated by JS -->
+                <div class="qual-param-chip active" data-key="turb_raw" style="--chip-color: #0d9488;"><span class="qual-chip-check">✓</span><span>ความขุ่น น้ำดิบ</span></div>
+                <div class="qual-param-chip active" data-key="turb_tap" style="--chip-color: #0284c7;"><span class="qual-chip-check">✓</span><span>ความขุ่น น้ำประปา</span></div>
+                <div class="qual-param-chip active" data-key="ph_raw" style="--chip-color: #6366f1;"><span class="qual-chip-check">✓</span><span>ค่า pH น้ำดิบ</span></div>
+                <div class="qual-param-chip active" data-key="ph_tap" style="--chip-color: #2563eb;"><span class="qual-chip-check">✓</span><span>ค่า pH น้ำประปา</span></div>
+                <div class="qual-param-chip active" data-key="chlorine" style="--chip-color: #10b981;"><span class="qual-chip-check">✓</span><span>คลอรีนคงเหลือ น้ำประปา</span></div>
               </div>
               <button id="btn-water-qual-select-all" class="btn-qual-action">เลือกทั้งหมด</button>
             </div>
@@ -584,8 +604,8 @@
   <!-- 7. Toast Notification Container -->
   <div id="toast-container" class="toast"></div>
 
-  <!-- Javascript Logic Files -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <!-- Javascript Logic Files (Cache-busted) -->
+  <script src="data.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
