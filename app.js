@@ -18,6 +18,7 @@ let state = {
   waterQualScope: 'month',   // 'filter' | 'month'
   wwQualDisplay: 'both',     // 'both' | 'table' | 'chart'
   waterQualDisplay: 'both',  // 'both' | 'table' | 'chart'
+  wwQtyMode: 'normal',       // 'normal' | 'month_avg'
   waterQtyMode: 'normal',    // 'normal' | 'month_avg'
   rawQtyMode: 'normal',      // 'normal' | 'month_avg'
   chartTypes: {
@@ -945,11 +946,11 @@ function getFilteredData() {
       ww_qty_p1: r.ww_qty_p1,
       ww_qty_p2: r.ww_qty_p2,
       ww_qty_total: r.ww_qty_total,
-      ww_qty_min: r.ww_qty_min || 4300,
+      ww_qty_min: STANDARDS.wwMinContract, // Constant 4300 for daily
       w_qty_p100: r.w_qty_p100,
       w_qty_p150: r.w_qty_p150,
       w_qty_total: r.w_qty_total,
-      w_qty_min: r.w_qty_min || 4800,
+      w_qty_min: STANDARDS.wMinContract,   // Constant 4800 for daily
       raw_qty_p1: r.raw_qty_p1,
       raw_qty_p2: r.raw_qty_p2,
       raw_qty_p3: r.raw_qty_p3,
@@ -1159,13 +1160,20 @@ function computePeriodStats(records) {
     result[k] = count > 0 ? parseFloat((sum / count).toFixed(2)) : null;
   });
 
-  // Compute Daily Averages (ลบ.ม./วัน) for Water Distribution & Raw Water Intake
+  // Compute Daily Averages (ลบ.ม./วัน) for Wastewater, Water Distribution & Raw Water Intake
+  let wwDays = 0;
   let wDays = 0;
   let rawDays = 0;
   records.forEach(r => {
+    if (r.ww_qty_total !== null && r.ww_qty_total !== undefined && r.ww_qty_total > 0) wwDays++;
     if (r.w_qty_total !== null && r.w_qty_total !== undefined && r.w_qty_total > 0) wDays++;
     if (r.raw_qty_total !== null && r.raw_qty_total !== undefined && r.raw_qty_total > 0) rawDays++;
   });
+  result.ww_days_count = wwDays;
+  result.ww_qty_daily_avg = (wwDays > 0 && result.ww_qty_total !== null) ? parseFloat((result.ww_qty_total / wwDays).toFixed(2)) : null;
+  result.ww_qty_p1_daily_avg = (wwDays > 0 && result.ww_qty_p1 !== null) ? parseFloat((result.ww_qty_p1 / wwDays).toFixed(2)) : null;
+  result.ww_qty_p2_daily_avg = (wwDays > 0 && result.ww_qty_p2 !== null) ? parseFloat((result.ww_qty_p2 / wwDays).toFixed(2)) : null;
+
   result.w_days_count = wDays;
   result.w_qty_daily_avg = (wDays > 0 && result.w_qty_total !== null) ? parseFloat((result.w_qty_total / wDays).toFixed(2)) : null;
   result.w_qty_p100_daily_avg = (wDays > 0 && result.w_qty_p100 !== null) ? parseFloat((result.w_qty_p100 / wDays).toFixed(2)) : null;
@@ -1200,8 +1208,8 @@ function getActiveMonthStats() {
       x: formatShortDate(r.date),
       rawX: r.date,
       ...r,
-      w_qty_min: r.w_qty_min || STANDARDS.wMinContract,
-      ww_qty_min: r.ww_qty_min || STANDARDS.wwMinContract
+      w_qty_min: STANDARDS.wMinContract,
+      ww_qty_min: STANDARDS.wwMinContract
     }));
 
   return {
@@ -1244,15 +1252,29 @@ function formatXAxisLabel(xVal) {
 
 // 8. Update KPI values
 function updateKPIs(dataList, activeRec) {
-  const wwVal = activeRec.ww_qty_total;
   const monthStats = getActiveMonthStats();
+  const isWwMonthAvg = state.wwQtyMode === 'month_avg';
+  const wwVal = isWwMonthAvg ? monthStats.ww_qty_daily_avg : activeRec.ww_qty_total;
   const isWaterMonthAvg = state.waterQtyMode === 'month_avg';
   const wVal = isWaterMonthAvg ? monthStats.w_qty_daily_avg : activeRec.w_qty_total;
   
   // KPI Numbers
-  document.getElementById('ww-kpi-val').innerHTML = formatVal(wwVal, 0) + '<span class="kpi-unit">ลบ.ม.</span>';
+  document.getElementById('ww-kpi-val').innerHTML = formatVal(wwVal, 0) + `<span class="kpi-unit">${isWwMonthAvg ? 'ลบ.ม./วัน' : 'ลบ.ม.'}</span>`;
   document.getElementById('water-kpi-val').innerHTML = formatVal(wVal, 0) + `<span class="kpi-unit">${isWaterMonthAvg ? 'ลบ.ม./วัน' : 'ลบ.ม.'}</span>`;
   
+  const wwKpiTitle = document.getElementById('ww-kpi-title');
+  if (wwKpiTitle) {
+    wwKpiTitle.textContent = isWwMonthAvg ? 'น้ำเสียเข้าระบบรวม (เฉลี่ยทั้งเดือน)' : 'น้ำเสียเข้าระบบรวม';
+  }
+  const wwKpiSub = document.getElementById('ww-kpi-month-avg-sub');
+  if (wwKpiSub) {
+    if (isWwMonthAvg) {
+      wwKpiSub.textContent = `เดือน${monthStats.monthShortLabel} รวม ${formatVal(monthStats.ww_qty_total, 0)} ลบ.ม. (${monthStats.ww_days_count || 0} วัน)`;
+    } else {
+      wwKpiSub.textContent = `เฉลี่ยทั้งเดือน (${monthStats.monthShortLabel}): ${formatVal(monthStats.ww_qty_daily_avg, 0)} ลบ.ม./วัน`;
+    }
+  }
+
   const wKpiTitle = document.getElementById('water-kpi-title');
   if (wKpiTitle) {
     wKpiTitle.textContent = isWaterMonthAvg ? 'ปริมาณน้ำจ่ายรวม (เฉลี่ยทั้งเดือน)' : 'ปริมาณน้ำจ่ายรวม';
@@ -1271,14 +1293,14 @@ function updateKPIs(dataList, activeRec) {
   let wMinTarget = STANDARDS.wMinContract;
   
   if (state.viewMode === 'weekly') {
-    wwMinTarget = activeRec.ww_qty_min || (STANDARDS.wwMinContract * 7);
+    wwMinTarget = isWwMonthAvg ? STANDARDS.wwMinContract : (activeRec.ww_qty_min || (STANDARDS.wwMinContract * 7));
     wMinTarget = isWaterMonthAvg ? STANDARDS.wMinContract : (activeRec.w_qty_min || (STANDARDS.wMinContract * 7));
   } else if (state.viewMode === 'monthly') {
     // average days in month
-    wwMinTarget = activeRec.ww_qty_min || (STANDARDS.wwMinContract * 30);
+    wwMinTarget = isWwMonthAvg ? STANDARDS.wwMinContract : (activeRec.ww_qty_min || (STANDARDS.wwMinContract * 30));
     wMinTarget = isWaterMonthAvg ? STANDARDS.wMinContract : (activeRec.w_qty_min || (STANDARDS.wMinContract * 30));
   } else if (state.viewMode === 'yearly') {
-    wwMinTarget = activeRec.ww_qty_min || (STANDARDS.wwMinContract * 365);
+    wwMinTarget = isWwMonthAvg ? STANDARDS.wwMinContract : (activeRec.ww_qty_min || (STANDARDS.wwMinContract * 365));
     wMinTarget = isWaterMonthAvg ? STANDARDS.wMinContract : (activeRec.w_qty_min || (STANDARDS.wMinContract * 365));
   }
   
@@ -1288,7 +1310,9 @@ function updateKPIs(dataList, activeRec) {
   // Footer text
   const wwCompareText = document.getElementById('ww-compare-text');
   const wwTrendBadge = document.getElementById('ww-trend-badge');
-  wwCompareText.textContent = `เกณฑ์ตามสัญญา (${formatVal(wwMinTarget, 0)} ลบ.ม.)`;
+  wwCompareText.textContent = isWwMonthAvg
+    ? `เกณฑ์ตามสัญญา (${formatVal(wwMinTarget, 0)} ลบ.ม./วัน)`
+    : `เกณฑ์ตามสัญญา (${formatVal(wwMinTarget, 0)} ลบ.ม.)`;
   if (wwVal >= wwMinTarget) {
     wwTrendBadge.className = 'trend-badge up';
     wwTrendBadge.innerHTML = `<i data-lucide="check-circle-2"></i> ${wwPct}%`;
@@ -1387,7 +1411,16 @@ function updateUnifiedReportWidget(rec) {
   document.getElementById('report-water-loss').textContent = formatVal(rec.water_loss_pct, 2) + ' %';
   
   // 4. ปริมาณน้ำเสีย
-  document.getElementById('report-ww-total').textContent = formatVal(rec.ww_qty_total, 0) + ' ลบ.ม.';
+  const isWwMonthAvg = state.wwQtyMode === 'month_avg';
+  document.getElementById('report-ww-total').textContent = isWwMonthAvg
+    ? `${formatVal(monthStats.ww_qty_daily_avg, 0)} ลบ.ม./วัน`
+    : `${formatVal(rec.ww_qty_total, 0)} ลบ.ม.`;
+  const reportWwSub = document.getElementById('report-ww-month-avg');
+  if (reportWwSub) {
+    reportWwSub.textContent = isWwMonthAvg
+      ? `เฉลี่ยทั้งเดือน ${monthStats.monthShortLabel} (รวม ${formatVal(monthStats.ww_qty_total, 0)} ลบ.ม. / ${monthStats.ww_days_count || 0} วัน)`
+      : `เฉลี่ยทั้งเดือน (${monthStats.monthShortLabel}): ${formatVal(monthStats.ww_qty_daily_avg, 0)} ลบ.ม./วัน`;
+  }
   
   // Quality fields (5 to 13)
   document.getElementById('report-turb-raw').textContent = formatVal(rec.turb_raw, 2) + ' NTU';
@@ -1434,21 +1467,50 @@ function updateIndicatorRange(id, val, min, max) {
 // 10. Update & Redraw Charts
 function updateCharts(chartData) {
   const categories = chartData.map(c => c.x);
+  const monthStats = getActiveMonthStats();
+  const isPeriodAggregated = (state.viewMode === 'monthly' || state.viewMode === 'yearly');
   
   // 10.1 Wastewater Quantity Chart (Show only Total, breakdown in tooltip)
   const isWwQtyLine = state.chartTypes['chart-ww-qty'] === 'line';
+  const isWwMonthAvg = state.wwQtyMode === 'month_avg';
+  const valWwBanner = document.getElementById('val-ww-qty-month-avg');
+  const subWwBanner = document.getElementById('sub-ww-qty-month-avg');
+  const wwBannerEl = document.getElementById('ww-qty-avg-banner');
+  if (valWwBanner) valWwBanner.textContent = `${formatVal(monthStats.ww_qty_daily_avg, 0)} ลบ.ม./วัน`;
+  if (subWwBanner) subWwBanner.textContent = `เดือน${monthStats.monthLabel} (รวม ${formatVal(monthStats.ww_qty_total, 0)} ลบ.ม. จาก ${monthStats.ww_days_count || 0} วัน)`;
+  if (wwBannerEl) wwBannerEl.classList.toggle('active-mode', isWwMonthAvg);
+
+  const wwChartDataset = (isWwMonthAvg && (state.viewMode === 'daily' || state.viewMode === 'weekly'))
+    ? monthStats.monthChartData
+    : chartData;
+  const wwCategories = wwChartDataset.map(c => c.x);
+
   const wwQtySeries = [
     {
-      name: 'น้ำเสียรวมเข้าระบบ',
+      name: isWwMonthAvg ? 'น้ำเสียรวมเฉลี่ย (ลบ.ม./วัน)' : 'น้ำเสียรวมเข้าระบบ',
       type: isWwQtyLine ? 'line' : 'column',
-      data: chartData.map(c => c.ww_qty_total)
+      data: wwChartDataset.map(c => (isWwMonthAvg && isPeriodAggregated) ? c.ww_qty_daily_avg : c.ww_qty_total)
     },
     {
       name: 'เกณฑ์สัญญาขั้นต่ำ',
       type: 'line',
-      data: chartData.map(c => c.ww_qty_min)
+      data: wwChartDataset.map(c => (isWwMonthAvg || state.viewMode === 'daily') ? STANDARDS.wwMinContract : (c.ww_qty_min || (STANDARDS.wwMinContract * (state.viewMode === 'weekly' ? 7 : (state.viewMode === 'monthly' ? 30 : 365)))))
     }
   ];
+  const wwQtyAnnotations = (isWwMonthAvg && !isPeriodAggregated && monthStats.ww_qty_daily_avg !== null) ? {
+    yaxis: [{
+      y: monthStats.ww_qty_daily_avg,
+      borderColor: '#3b82f6',
+      borderWidth: 2,
+      strokeDashArray: 4,
+      label: {
+        borderColor: '#3b82f6',
+        style: { color: '#ffffff', background: '#3b82f6', fontSize: '10px', fontWeight: 600 },
+        text: `เฉลี่ยทั้งเดือน ${formatVal(monthStats.ww_qty_daily_avg, 0)} ลบ.ม./วัน`
+      }
+    }]
+  } : {};
+
   const wwQtyOptions = {
     series: wwQtySeries,
     chart: {
@@ -1483,24 +1545,32 @@ function updateCharts(chartData) {
         colors: ['#000000']
       }
     },
-    xaxis: { categories: categories },
+    xaxis: { categories: wwCategories },
     yaxis: {
-      title: { text: 'ลบ.ม. / ช่วงเวลา' }
+      title: { text: isWwMonthAvg ? 'ลบ.ม./วัน' : 'ลบ.ม. / ช่วงเวลา' }
     },
+    annotations: wwQtyAnnotations,
     tooltip: {
       custom: function({series, seriesIndex, dataPointIndex, w}) {
-        const item = chartData[dataPointIndex];
+        const item = wwChartDataset[dataPointIndex];
+        if (!item) return '';
+        const unitStr = isWwMonthAvg ? 'ลบ.ม./วัน' : 'ลบ.ม.';
+        const mainVal = (isWwMonthAvg && isPeriodAggregated) ? item.ww_qty_daily_avg : item.ww_qty_total;
+        const p1Val = (isWwMonthAvg && isPeriodAggregated) ? item.ww_qty_p1_daily_avg : item.ww_qty_p1;
+        const p2Val = (isWwMonthAvg && isPeriodAggregated) ? item.ww_qty_p2_daily_avg : item.ww_qty_p2;
+        const minVal = (isWwMonthAvg || state.viewMode === 'daily') ? STANDARDS.wwMinContract : item.ww_qty_min;
         return '<div class="custom-tooltip">' +
           '<div><b>ช่วงเวลา:</b> ' + item.x + '</div>' +
-          '<div style="color:#2563eb"><b>น้ำเสียเข้าระบบรวม:</b> ' + formatVal(item.ww_qty_total, 0) + ' ลบ.ม.</div>' +
-          '<div>Plant 1: ' + formatVal(item.ww_qty_p1, 0) + ' ลบ.ม.</div>' +
-          '<div>Plant 2: ' + formatVal(item.ww_qty_p2, 0) + ' ลบ.ม.</div>' +
-          '<div style="color:#ef4444; border-top: 1px solid #e2e8f0; margin-top:4px; padding-top:4px;">เกณฑ์ขั้นต่ำสัญญา: ' + formatVal(item.ww_qty_min, 0) + ' ลบ.ม.</div>' +
+          '<div style="color:#2563eb"><b>น้ำเสียเข้าระบบรวม:</b> ' + formatVal(mainVal, 0) + ' ' + unitStr + '</div>' +
+          '<div>Plant 1: ' + formatVal(p1Val, 0) + ' ' + unitStr + '</div>' +
+          '<div>Plant 2: ' + formatVal(p2Val, 0) + ' ' + unitStr + '</div>' +
+          (isWwMonthAvg && !isPeriodAggregated ? '<div style="color:#1d4ed8; font-weight:600;">ค่าเฉลี่ยทั้งเดือน: ' + formatVal(monthStats.ww_qty_daily_avg, 0) + ' ลบ.ม./วัน</div>' : '') +
+          '<div style="color:#ef4444; border-top: 1px solid #e2e8f0; margin-top:4px; padding-top:4px;">เกณฑ์ขั้นต่ำสัญญา: ' + formatVal(minVal, 0) + ' ' + unitStr + '</div>' +
           '</div>';
       }
     }
   };
-  renderChart('chart-ww-qty', wwQtyOptions, state.chartTypes['chart-ww-qty']);
+  renderChart('chart-ww-qty', wwQtyOptions, `${state.chartTypes['chart-ww-qty']}-${state.wwQtyMode}`);
 
   // 10.2 COD Collecting Sump vs Standard
   const isCodSumpLine = state.chartTypes['chart-cod-sump'] === 'line';
@@ -1650,7 +1720,7 @@ function updateCharts(chartData) {
     {
       name: 'เกณฑ์สัญญาขั้นต่ำ',
       type: 'line',
-      data: wChartDataset.map(c => (isWaterMonthAvg && isPeriodAggregated) ? STANDARDS.wMinContract : c.w_qty_min)
+      data: wChartDataset.map(c => (isWaterMonthAvg || state.viewMode === 'daily') ? STANDARDS.wMinContract : (c.w_qty_min || (STANDARDS.wMinContract * (state.viewMode === 'weekly' ? 7 : (state.viewMode === 'monthly' ? 30 : 365)))))
     }
   ];
   const wQtyAnnotations = (isWaterMonthAvg && !isPeriodAggregated && monthStats.w_qty_daily_avg !== null) ? {
@@ -1712,7 +1782,7 @@ function updateCharts(chartData) {
         const mainVal = (isWaterMonthAvg && isPeriodAggregated) ? item.w_qty_daily_avg : item.w_qty_total;
         const p100Val = (isWaterMonthAvg && isPeriodAggregated) ? item.w_qty_p100_daily_avg : item.w_qty_p100;
         const p150Val = (isWaterMonthAvg && isPeriodAggregated) ? item.w_qty_p150_daily_avg : item.w_qty_p150;
-        const minVal = (isWaterMonthAvg && isPeriodAggregated) ? STANDARDS.wMinContract : item.w_qty_min;
+        const minVal = (isWaterMonthAvg || state.viewMode === 'daily') ? STANDARDS.wMinContract : item.w_qty_min;
         return '<div class="custom-tooltip">' +
           '<div><b>ช่วงเวลา:</b> ' + item.x + '</div>' +
           '<div style="color:#0284c7"><b>น้ำจ่ายรวม:</b> ' + formatVal(mainVal, 0) + ' ' + unitStr + '</div>' +
@@ -1952,11 +2022,14 @@ function initQtyModeSwitchers() {
     group.querySelectorAll('.qty-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const nextMode = btn.dataset.mode; // 'normal' | 'month_avg'
-        if (target === 'water_qty') {
+        if (target === 'ww_qty') {
+          state.wwQtyMode = nextMode;
+        } else if (target === 'water_qty') {
           state.waterQtyMode = nextMode;
         } else if (target === 'raw_qty') {
           state.rawQtyMode = nextMode;
         } else if (target === 'both') {
+          state.wwQtyMode = nextMode;
           state.waterQtyMode = nextMode;
           state.rawQtyMode = nextMode;
         }
@@ -1972,13 +2045,15 @@ function syncQtyModeTabsUI() {
     const target = group.dataset.target;
     group.querySelectorAll('.qty-mode-btn').forEach(btn => {
       const m = btn.dataset.mode;
-      if (target === 'water_qty') {
+      if (target === 'ww_qty') {
+        btn.classList.toggle('active', state.wwQtyMode === m);
+      } else if (target === 'water_qty') {
         btn.classList.toggle('active', state.waterQtyMode === m);
       } else if (target === 'raw_qty') {
         btn.classList.toggle('active', state.rawQtyMode === m);
       } else if (target === 'both') {
-        const bothMatch = (state.waterQtyMode === m && state.rawQtyMode === m);
-        btn.classList.toggle('active', bothMatch);
+        const allMatch = (state.wwQtyMode === m && state.waterQtyMode === m && state.rawQtyMode === m);
+        btn.classList.toggle('active', allMatch);
       }
     });
   });
