@@ -14,8 +14,8 @@ let state = {
   allData: [],
   wwQualSelected: ['cod_sump', 'cod_post'],
   waterQualSelected: ['turb_raw', 'turb_tap', 'ph_raw', 'ph_tap', 'chlorine'],
-  wwQualScope: 'filter',     // 'filter' | 'month'
-  waterQualScope: 'filter',  // 'filter' | 'month'
+  wwQualScope: 'month',      // 'filter' | 'month'
+  waterQualScope: 'month',   // 'filter' | 'month'
   wwQualDisplay: 'both',     // 'both' | 'table' | 'chart'
   waterQualDisplay: 'both'   // 'both' | 'table' | 'chart'
 };
@@ -145,9 +145,9 @@ const THAI_MONTHS_FULL = {
 
 // Initialize Application
 window.addEventListener('DOMContentLoaded', () => {
-  initData();
-  setupEventListeners();
   initUI();
+  setupEventListeners();
+  initData();
 });
 
 const SHEET_ID = '1XWht8w-kyG-eKhwNILd9wK9snNwHAjmH7aR7Y-25uA0';
