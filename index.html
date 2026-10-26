@@ -16,14 +16,14 @@
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <!-- CSS Stylesheets (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
   
   <script>
-    // Force purge old Service Worker caches (v1-v6) so updated CSS/JS load immediately
+    // Force purge old Service Worker caches (v1-v7) so updated CSS/JS load immediately
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (key !== 'uulcws-cache-v7') {
+          if (key !== 'uulcws-cache-v8') {
             caches.delete(key);
           }
         });
@@ -253,13 +253,16 @@
         <!-- KPI 3: Water Distribution -->
         <div id="kpi-card-water-flow" class="kpi-card water">
           <div class="kpi-header">
-            <span>ปริมาณน้ำจ่ายรวม</span>
+            <span id="water-kpi-title">ปริมาณน้ำจ่ายรวม</span>
             <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
           </div>
           <div id="water-kpi-val" class="kpi-value">- <span class="kpi-unit">ลบ.ม.</span></div>
-          <div class="kpi-footer">
-            <span id="water-trend-badge" class="trend-badge"></span>
-            <span id="water-compare-text" class="kpi-compare-text"></span>
+          <div class="kpi-footer" style="flex-wrap: wrap; justify-content: space-between;">
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+              <span id="water-trend-badge" class="trend-badge"></span>
+              <span id="water-compare-text" class="kpi-compare-text"></span>
+            </div>
+            <span id="water-kpi-month-avg-sub" style="font-size:0.72rem;color:var(--color-water);font-weight:600;"></span>
           </div>
         </div>
         
@@ -279,22 +282,34 @@
 
       <!-- 4. Unified Daily Text Report Card -->
       <section id="unified-report-section" class="stat-widget" style="margin-bottom: 2rem;">
-        <div class="widget-title">
-          <span>รายงานประจำวัน</span>
-          <span id="report-date-label" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">ข้อมูลประจำวันที่ 01/01/2569</span>
+        <div class="widget-title" style="align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span>รายงานประจำวัน</span>
+            <span id="report-date-label" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500; margin-left: 0.5rem;">ข้อมูลประจำวันที่ 01/01/2569</span>
+          </div>
+          <div class="qty-mode-tabs" data-target="both">
+            <button class="qty-mode-btn active" data-mode="normal">ตามช่วงที่เลือก (ลบ.ม.)</button>
+            <button class="qty-mode-btn" data-mode="month_avg">เฉลี่ยทั้งเดือน (ลบ.ม./วัน)</button>
+          </div>
         </div>
         
         <div style="max-width: 600px; margin: 0 auto;">
           <!-- 1. ปริมาณน้ำดิบรวม -->
-          <div class="widget-row">
-            <div class="widget-label">ปริมาณน้ำดิบรวม</div>
-            <div class="widget-val" id="report-raw-total" style="font-weight: 600;">-</div>
+          <div class="widget-row" style="flex-wrap: wrap; gap: 0.25rem;">
+            <div class="widget-label" id="label-report-raw-total">ปริมาณน้ำดิบรวม</div>
+            <div style="text-align: right;">
+              <div class="widget-val" id="report-raw-total" style="font-weight: 600;">-</div>
+              <div id="report-raw-month-avg" style="font-size: 0.73rem; color: #0d9488; font-weight: 600;">เฉลี่ยทั้งเดือน: - ลบ.ม./วัน</div>
+            </div>
           </div>
           
           <!-- 2. ปริมาณน้ำประปารวม -->
-          <div class="widget-row">
-            <div class="widget-label">ปริมาณน้ำประปารวม</div>
-            <div class="widget-val" id="report-water-total" style="font-weight: 700; color: var(--color-water);">-</div>
+          <div class="widget-row" style="flex-wrap: wrap; gap: 0.25rem;">
+            <div class="widget-label" id="label-report-water-total">ปริมาณน้ำประปารวม (น้ำจ่ายรวม)</div>
+            <div style="text-align: right;">
+              <div class="widget-val" id="report-water-total" style="font-weight: 700; color: var(--color-water);">-</div>
+              <div id="report-water-month-avg" style="font-size: 0.73rem; color: var(--color-water); font-weight: 600;">เฉลี่ยทั้งเดือน: - ลบ.ม./วัน</div>
+            </div>
           </div>
           
           <!-- 3. % น้ำสูญเสียเฉลี่ยสะสม -->
@@ -503,12 +518,22 @@
             <div class="chart-header">
               <div class="chart-title">
                 <h3>ปริมาณน้ำจ่ายรวม</h3>
-                <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,800 ลบ.ม./วัน</p>
+                <p id="sub-chart-water-qty">เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,800 ลบ.ม./วัน</p>
               </div>
-              <div class="chart-type-tabs" data-chart="chart-water-qty">
-                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
-                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              <div class="qual-view-controls">
+                <div class="qty-mode-tabs" data-target="water_qty">
+                  <button class="qty-mode-btn active" data-mode="normal">ผลรวม (ลบ.ม.)</button>
+                  <button class="qty-mode-btn" data-mode="month_avg">เฉลี่ยทั้งเดือน (ลบ.ม./วัน)</button>
+                </div>
+                <div class="chart-type-tabs" data-chart="chart-water-qty">
+                  <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                  <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+                </div>
               </div>
+            </div>
+            <div id="water-qty-avg-banner" class="month-avg-banner water-avg-banner">
+              <span>💧 ค่าเฉลี่ยน้ำจ่ายรวมทั้งเดือน: <strong id="val-water-qty-month-avg">- ลบ.ม./วัน</strong></span>
+              <span id="sub-water-qty-month-avg" class="avg-banner-sub"></span>
             </div>
             <div class="chart-wrapper">
               <div id="chart-water-qty"></div>
@@ -520,12 +545,22 @@
             <div class="chart-header">
               <div class="chart-title">
                 <h3>ปริมาณน้ำดิบรวม</h3>
-                <p>ปริมาณน้ำดิบรวมเข้าระบบผลิตน้ำประปา</p>
+                <p id="sub-chart-raw-intake">ปริมาณน้ำดิบรวมเข้าระบบผลิตน้ำประปา</p>
               </div>
-              <div class="chart-type-tabs" data-chart="chart-raw-intake">
-                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
-                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              <div class="qual-view-controls">
+                <div class="qty-mode-tabs" data-target="raw_qty">
+                  <button class="qty-mode-btn active" data-mode="normal">ผลรวม (ลบ.ม.)</button>
+                  <button class="qty-mode-btn" data-mode="month_avg">เฉลี่ยทั้งเดือน (ลบ.ม./วัน)</button>
+                </div>
+                <div class="chart-type-tabs" data-chart="chart-raw-intake">
+                  <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                  <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+                </div>
               </div>
+            </div>
+            <div id="raw-intake-avg-banner" class="month-avg-banner raw-avg-banner">
+              <span>🌊 ค่าเฉลี่ยน้ำดิบรวมทั้งเดือน: <strong id="val-raw-intake-month-avg">- ลบ.ม./วัน</strong></span>
+              <span id="sub-raw-intake-month-avg" class="avg-banner-sub"></span>
             </div>
             <div class="chart-wrapper">
               <div id="chart-raw-intake"></div>
@@ -643,7 +678,7 @@
   <div id="toast-container" class="toast"></div>
 
   <!-- Javascript Logic Files (Cache-busted) -->
-  <script src="data.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="data.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
