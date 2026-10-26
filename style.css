@@ -1030,7 +1030,8 @@ body {
 }
 
 .qual-scope-tabs,
-.qual-display-tabs {
+.qual-display-tabs,
+.chart-type-tabs {
   display: inline-flex;
   background: #f1f5f9;
   border-radius: var(--radius-sm);
@@ -1039,7 +1040,8 @@ body {
 }
 
 .qual-scope-btn,
-.qual-display-btn {
+.qual-display-btn,
+.chart-type-btn {
   padding: 0.28rem 0.6rem;
   border-radius: 6px;
   border: none;
@@ -1054,12 +1056,14 @@ body {
 }
 
 .qual-scope-btn:hover,
-.qual-display-btn:hover {
+.qual-display-btn:hover,
+.chart-type-btn:hover {
   color: var(--text-primary);
 }
 
 .qual-scope-btn.active,
-.qual-display-btn.active {
+.qual-display-btn.active,
+.chart-type-btn.active {
   background: #ffffff;
   color: var(--color-primary);
   box-shadow: var(--shadow-sm);
