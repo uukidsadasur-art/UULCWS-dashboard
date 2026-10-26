@@ -1031,7 +1031,8 @@ body {
 
 .qual-scope-tabs,
 .qual-display-tabs,
-.chart-type-tabs {
+.chart-type-tabs,
+.qty-mode-tabs {
   display: inline-flex;
   background: #f1f5f9;
   border-radius: var(--radius-sm);
@@ -1041,7 +1042,8 @@ body {
 
 .qual-scope-btn,
 .qual-display-btn,
-.chart-type-btn {
+.chart-type-btn,
+.qty-mode-btn {
   padding: 0.28rem 0.6rem;
   border-radius: 6px;
   border: none;
@@ -1057,16 +1059,59 @@ body {
 
 .qual-scope-btn:hover,
 .qual-display-btn:hover,
-.chart-type-btn:hover {
+.chart-type-btn:hover,
+.qty-mode-btn:hover {
   color: var(--text-primary);
 }
 
 .qual-scope-btn.active,
 .qual-display-btn.active,
-.chart-type-btn.active {
+.chart-type-btn.active,
+.qty-mode-btn.active {
   background: #ffffff;
   color: var(--color-primary);
   box-shadow: var(--shadow-sm);
+}
+
+.month-avg-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.65rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  transition: var(--transition-fast);
+}
+
+.water-avg-banner {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+.raw-avg-banner {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.month-avg-banner.active-mode {
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.month-avg-banner b {
+  font-size: 0.9rem;
+  margin-left: 0.35rem;
+}
+
+.avg-banner-sub {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  font-weight: 500;
 }
 
 .qual-param-bar {
