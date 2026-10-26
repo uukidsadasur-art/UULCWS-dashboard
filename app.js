@@ -2366,7 +2366,7 @@ function updateQualityCompareSection(plant, baseChartData) {
           label: {
             borderColor: '#dc2626',
             style: { color: '#ffffff', background: '#dc2626', fontSize: '10px', fontWeight: 600 },
-            text: 'เกณฑ์ความขุ่น 4 NTU'
+            text: 'เกณฑ์ความขุ่นน้ำประปา 4 NTU'
           }
         });
         yMax = Math.max(maxVal, 5);
