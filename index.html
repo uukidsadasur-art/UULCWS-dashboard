@@ -16,14 +16,14 @@
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <!-- CSS Stylesheets (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
   
   <script>
-    // Force purge old Service Worker caches (v1-v7) so updated CSS/JS load immediately
+    // Force purge old Service Worker caches (v1-v8) so updated CSS/JS load immediately
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (key !== 'uulcws-cache-v8') {
+          if (key !== 'uulcws-cache-v9') {
             caches.delete(key);
           }
         });
@@ -227,13 +227,16 @@
         <!-- KPI 1: Wastewater Flow -->
         <div id="kpi-card-ww-flow" class="kpi-card ww">
           <div class="kpi-header">
-            <span>น้ำเสียเข้าระบบรวม</span>
+            <span id="ww-kpi-title">น้ำเสียเข้าระบบรวม</span>
             <div class="kpi-icon"><i data-lucide="activity"></i></div>
           </div>
           <div id="ww-kpi-val" class="kpi-value">- <span class="kpi-unit">ลบ.ม.</span></div>
-          <div class="kpi-footer">
-            <span id="ww-trend-badge" class="trend-badge"></span>
-            <span id="ww-compare-text" class="kpi-compare-text"></span>
+          <div class="kpi-footer" style="flex-wrap: wrap; justify-content: space-between;">
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+              <span id="ww-trend-badge" class="trend-badge"></span>
+              <span id="ww-compare-text" class="kpi-compare-text"></span>
+            </div>
+            <span id="ww-kpi-month-avg-sub" style="font-size:0.72rem;color:var(--color-ww);font-weight:600;"></span>
           </div>
         </div>
         
@@ -319,9 +322,12 @@
           </div>
           
           <!-- 4. ปริมาณน้ำเสีย -->
-          <div class="widget-row">
-            <div class="widget-label">ปริมาณน้ำเสียรวมเข้าระบบบำบัด</div>
-            <div class="widget-val" id="report-ww-total" style="font-weight: 700; color: var(--color-ww);">-</div>
+          <div class="widget-row" style="flex-wrap: wrap; gap: 0.25rem;">
+            <div class="widget-label" id="label-report-ww-total">ปริมาณน้ำเสียรวมเข้าระบบบำบัด</div>
+            <div style="text-align: right;">
+              <div class="widget-val" id="report-ww-total" style="font-weight: 700; color: var(--color-ww);">-</div>
+              <div id="report-ww-month-avg" style="font-size: 0.73rem; color: var(--color-ww); font-weight: 600;">เฉลี่ยทั้งเดือน: - ลบ.ม./วัน</div>
+            </div>
           </div>
           
           <!-- SECTION: คุณภาพน้ำ -->
@@ -410,12 +416,26 @@
                 <h3>ปริมาณน้ำเสียเข้าระบบบำบัดรวม</h3>
                 <p>เปรียบเทียบกับเกณฑ์ขั้นต่ำสัญญา 4,300 ลบ.ม./วัน</p>
               </div>
-              <div class="chart-type-tabs" data-chart="chart-ww-qty">
-                <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
-                <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+              <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+                <div class="qty-mode-tabs" data-target="ww_qty">
+                  <button class="qty-mode-btn active" data-mode="normal">ผลรวม (ลบ.ม.)</button>
+                  <button class="qty-mode-btn" data-mode="month_avg">เฉลี่ยทั้งเดือน (ลบ.ม./วัน)</button>
+                </div>
+                <div class="chart-type-tabs" data-chart="chart-ww-qty">
+                  <button class="chart-type-btn active" data-type="bar">กราฟแท่ง</button>
+                  <button class="chart-type-btn" data-type="line">กราฟเส้น</button>
+                </div>
               </div>
             </div>
             <div class="chart-wrapper">
+              <!-- Monthly Average Flex Banner for Wastewater -->
+              <div class="month-avg-banner ww-avg-banner" id="ww-qty-avg-banner">
+                <div>
+                  <span>ค่าเฉลี่ยรายวันทั้งเดือน:</span>
+                  <b id="val-ww-qty-month-avg">- ลบ.ม./วัน</b>
+                </div>
+                <div class="avg-banner-sub" id="sub-ww-qty-month-avg">-</div>
+              </div>
               <div id="chart-ww-qty"></div>
             </div>
           </div>
@@ -678,7 +698,7 @@
   <div id="toast-container" class="toast"></div>
 
   <!-- Javascript Logic Files (Cache-busted) -->
-  <script src="data.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="data.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
