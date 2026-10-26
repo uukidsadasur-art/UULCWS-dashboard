@@ -17,7 +17,17 @@ let state = {
   wwQualScope: 'month',      // 'filter' | 'month'
   waterQualScope: 'month',   // 'filter' | 'month'
   wwQualDisplay: 'both',     // 'both' | 'table' | 'chart'
-  waterQualDisplay: 'both'   // 'both' | 'table' | 'chart'
+  waterQualDisplay: 'both',  // 'both' | 'table' | 'chart'
+  chartTypes: {
+    'chart-ww-qty': 'bar',
+    'chart-ww-qual-compare': 'bar',
+    'chart-cod-sump': 'bar',
+    'chart-cod-post': 'bar',
+    'chart-water-qty': 'bar',
+    'chart-raw-intake': 'bar',
+    'chart-water-qual-compare': 'bar',
+    'chart-ph-raw': 'line'
+  }
 };
 
 // Water Quality Parameters Metadata (Separated for Wastewater & Tap Water)
@@ -1337,10 +1347,11 @@ function updateCharts(chartData) {
   const categories = chartData.map(c => c.x);
   
   // 10.1 Wastewater Quantity Chart (Show only Total, breakdown in tooltip)
+  const isWwQtyLine = state.chartTypes['chart-ww-qty'] === 'line';
   const wwQtySeries = [
     {
       name: 'น้ำเสียรวมเข้าระบบ',
-      type: 'column',
+      type: isWwQtyLine ? 'line' : 'column',
       data: chartData.map(c => c.ww_qty_total)
     },
     {
@@ -1358,8 +1369,12 @@ function updateCharts(chartData) {
     },
     colors: ['#3b82f6', '#ef4444'],
     stroke: {
-      width: [0, 2],
-      dashArray: [0, 5] // line series is dashed
+      width: [isWwQtyLine ? 3 : 0, 2],
+      dashArray: [0, 5], // line series is dashed
+      curve: 'smooth'
+    },
+    markers: {
+      size: [isWwQtyLine ? 4 : 0, 0]
     },
     plotOptions: {
       bar: {
@@ -1373,7 +1388,7 @@ function updateCharts(chartData) {
     dataLabels: {
       enabled: state.showDataLabels,
       enabledOnSeries: [0],
-      offsetY: -18,
+      offsetY: isWwQtyLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1396,9 +1411,10 @@ function updateCharts(chartData) {
       }
     }
   };
-  renderChart('chart-ww-qty', wwQtyOptions);
+  renderChart('chart-ww-qty', wwQtyOptions, state.chartTypes['chart-ww-qty']);
 
   // 10.2 COD Collecting Sump vs Standard
+  const isCodSumpLine = state.chartTypes['chart-cod-sump'] === 'line';
   const codSumpSeries = [{
     name: 'COD Collecting Sump',
     data: chartData.map(c => c.cod_sump)
@@ -1407,10 +1423,17 @@ function updateCharts(chartData) {
     series: codSumpSeries,
     chart: {
       height: 280,
-      type: 'bar',
+      type: isCodSumpLine ? 'line' : 'bar',
       toolbar: { show: false }
     },
     colors: ['#d97706'],
+    stroke: {
+      width: isCodSumpLine ? 3 : 0,
+      curve: 'smooth'
+    },
+    markers: {
+      size: isCodSumpLine ? 4 : 0
+    },
     plotOptions: {
       bar: {
         columnWidth: '40%',
@@ -1422,7 +1445,7 @@ function updateCharts(chartData) {
     },
     dataLabels: {
       enabled: state.showDataLabels,
-      offsetY: -18,
+      offsetY: isCodSumpLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1448,9 +1471,10 @@ function updateCharts(chartData) {
       }]
     }
   };
-  renderChart('chart-cod-sump', codSumpOptions);
+  renderChart('chart-cod-sump', codSumpOptions, state.chartTypes['chart-cod-sump']);
 
   // 10.3 COD Post Aeration Lab only vs 120 standard
+  const isCodPostLine = state.chartTypes['chart-cod-post'] === 'line';
   const codPostSeries = [{
     name: 'COD Post Aeration (Lab)',
     data: chartData.map(c => c.cod_post)
@@ -1459,10 +1483,17 @@ function updateCharts(chartData) {
     series: codPostSeries,
     chart: {
       height: 280,
-      type: 'bar',
+      type: isCodPostLine ? 'line' : 'bar',
       toolbar: { show: false }
     },
     colors: ['#b45309'],
+    stroke: {
+      width: isCodPostLine ? 3 : 0,
+      curve: 'smooth'
+    },
+    markers: {
+      size: isCodPostLine ? 4 : 0
+    },
     plotOptions: {
       bar: {
         columnWidth: '40%',
@@ -1474,7 +1505,7 @@ function updateCharts(chartData) {
     },
     dataLabels: {
       enabled: state.showDataLabels,
-      offsetY: -18,
+      offsetY: isCodPostLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1500,13 +1531,14 @@ function updateCharts(chartData) {
       }]
     }
   };
-  renderChart('chart-cod-post', codPostOptions);
+  renderChart('chart-cod-post', codPostOptions, state.chartTypes['chart-cod-post']);
 
   // 10.4 Water Quantity (Distribution vs Contract)
+  const isWaterQtyLine = state.chartTypes['chart-water-qty'] === 'line';
   const wQtySeries = [
     {
       name: 'น้ำประปาจ่ายรวม',
-      type: 'column',
+      type: isWaterQtyLine ? 'line' : 'column',
       data: chartData.map(c => c.w_qty_total)
     },
     {
@@ -1524,8 +1556,12 @@ function updateCharts(chartData) {
     },
     colors: ['#0284c7', '#ef4444'],
     stroke: {
-      width: [0, 2],
-      dashArray: [0, 5]
+      width: [isWaterQtyLine ? 3 : 0, 2],
+      dashArray: [0, 5],
+      curve: 'smooth'
+    },
+    markers: {
+      size: [isWaterQtyLine ? 4 : 0, 0]
     },
     plotOptions: {
       bar: {
@@ -1539,7 +1575,7 @@ function updateCharts(chartData) {
     dataLabels: {
       enabled: state.showDataLabels,
       enabledOnSeries: [0],
-      offsetY: -18,
+      offsetY: isWaterQtyLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1560,9 +1596,10 @@ function updateCharts(chartData) {
       }
     }
   };
-  renderChart('chart-water-qty', wQtyOptions);
+  renderChart('chart-water-qty', wQtyOptions, state.chartTypes['chart-water-qty']);
 
   // 10.5 Raw Water Intake (Only Total column, breakdown in tooltip)
+  const isRawIntakeLine = state.chartTypes['chart-raw-intake'] === 'line';
   const rawIntakeSeries = [{
     name: 'น้ำดิบเข้าระบบรวม',
     data: chartData.map(c => c.raw_qty_total)
@@ -1571,10 +1608,17 @@ function updateCharts(chartData) {
     series: rawIntakeSeries,
     chart: {
       height: 280,
-      type: 'bar',
+      type: isRawIntakeLine ? 'line' : 'bar',
       toolbar: { show: false }
     },
     colors: ['#0d9488'],
+    stroke: {
+      width: isRawIntakeLine ? 3 : 0,
+      curve: 'smooth'
+    },
+    markers: {
+      size: isRawIntakeLine ? 4 : 0
+    },
     plotOptions: {
       bar: {
         columnWidth: '40%',
@@ -1586,7 +1630,7 @@ function updateCharts(chartData) {
     },
     dataLabels: {
       enabled: state.showDataLabels,
-      offsetY: -18,
+      offsetY: isRawIntakeLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1607,9 +1651,10 @@ function updateCharts(chartData) {
       }
     }
   };
-  renderChart('chart-raw-intake', rawIntakeOptions);
+  renderChart('chart-raw-intake', rawIntakeOptions, state.chartTypes['chart-raw-intake']);
 
-  // 10.6 Raw Water pH with Max/Min highlight area (Line Chart)
+  // 10.6 Raw Water pH with Max/Min highlight area
+  const isPhRawLine = state.chartTypes['chart-ph-raw'] === 'line';
   const phSeries = [{
     name: 'pH น้ำดิบ',
     data: chartData.map(c => c.ph_raw)
@@ -1618,14 +1663,29 @@ function updateCharts(chartData) {
     series: phSeries,
     chart: {
       height: 280,
-      type: 'line',
+      type: isPhRawLine ? 'line' : 'bar',
       toolbar: { show: false }
     },
     colors: ['#0284c7'],
-    stroke: { width: 3 },
+    stroke: {
+      width: isPhRawLine ? 3 : 0,
+      curve: 'smooth'
+    },
+    markers: {
+      size: isPhRawLine ? 4 : 0
+    },
+    plotOptions: {
+      bar: {
+        columnWidth: '40%',
+        borderRadius: 3,
+        dataLabels: {
+          position: 'top'
+        }
+      }
+    },
     dataLabels: {
       enabled: state.showDataLabels,
-      offsetY: -6,
+      offsetY: isPhRawLine ? -6 : -18,
       style: {
         fontSize: '9px',
         colors: ['#000000']
@@ -1633,7 +1693,7 @@ function updateCharts(chartData) {
     },
     xaxis: { categories: categories },
     yaxis: {
-      min: 4,
+      min: isPhRawLine ? 4 : 0,
       max: 11,
       title: { text: 'pH' }
     },
@@ -1686,15 +1746,27 @@ function updateCharts(chartData) {
       ]
     }
   };
-  renderChart('chart-ph-raw', phOptions);
+  renderChart('chart-ph-raw', phOptions, state.chartTypes['chart-ph-raw']);
 }
 
-function renderChart(containerId, options) {
+let chartModes = {};
+
+function renderChart(containerId, options, modeKey) {
+  const effectiveMode = modeKey || (options.chart && options.chart.type) || 'bar';
   if (charts[containerId]) {
-    charts[containerId].updateOptions(options);
+    if (chartModes[containerId] && chartModes[containerId] !== effectiveMode) {
+      charts[containerId].destroy();
+      delete charts[containerId];
+    }
+  }
+  chartModes[containerId] = effectiveMode;
+
+  if (charts[containerId]) {
+    charts[containerId].updateOptions(options, true, true);
   } else {
     const el = document.getElementById(containerId);
     if (el) {
+      el.innerHTML = '';
       charts[containerId] = new ApexCharts(el, options);
       charts[containerId].render();
     }
@@ -1707,6 +1779,70 @@ function renderChart(containerId, options) {
 function initQualityCompareUI() {
   setupPlantQualityControls('ww', WW_QUAL_PARAMS);
   setupPlantQualityControls('water', WATER_QUAL_PARAMS);
+  initChartTypeSwitchers();
+}
+
+function initChartTypeSwitchers() {
+  // Per-chart type switchers
+  document.querySelectorAll('.chart-type-tabs[data-chart]').forEach(tabGroup => {
+    const chartId = tabGroup.dataset.chart;
+    tabGroup.querySelectorAll('.chart-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextType = btn.dataset.type;
+        state.chartTypes[chartId] = nextType;
+        tabGroup.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        syncGlobalChartTypeUI();
+
+        const filtered = getFilteredData();
+        if (chartId === 'chart-ww-qual-compare') {
+          updateQualityCompareSection('ww', filtered.chartData);
+        } else if (chartId === 'chart-water-qual-compare') {
+          updateQualityCompareSection('water', filtered.chartData);
+        } else {
+          updateCharts(filtered.chartData);
+        }
+      });
+    });
+  });
+
+  // Global chart type switcher (All charts at once)
+  const globalTabs = document.getElementById('global-chart-type-tabs');
+  if (globalTabs) {
+    globalTabs.querySelectorAll('.chart-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetType = btn.dataset.type;
+        Object.keys(state.chartTypes).forEach(k => {
+          state.chartTypes[k] = targetType;
+        });
+
+        // Update all per-chart buttons UI
+        document.querySelectorAll('.chart-type-tabs[data-chart]').forEach(group => {
+          group.querySelectorAll('.chart-type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === targetType);
+          });
+        });
+        syncGlobalChartTypeUI();
+
+        const filtered = getFilteredData();
+        updateCharts(filtered.chartData);
+        updateQualityCompareSection('ww', filtered.chartData);
+        updateQualityCompareSection('water', filtered.chartData);
+      });
+    });
+  }
+}
+
+function syncGlobalChartTypeUI() {
+  const globalTabs = document.getElementById('global-chart-type-tabs');
+  if (!globalTabs) return;
+  const allValues = Object.values(state.chartTypes);
+  const allBar = allValues.every(v => v === 'bar');
+  const allLine = allValues.every(v => v === 'line');
+  globalTabs.querySelectorAll('.chart-type-btn').forEach(btn => {
+    if (btn.dataset.type === 'bar') btn.classList.toggle('active', allBar);
+    if (btn.dataset.type === 'line') btn.classList.toggle('active', allLine);
+  });
 }
 
 function setupPlantQualityControls(plant, paramConfigs) {
@@ -1891,6 +2027,8 @@ function updateQualityCompareSection(plant, baseChartData) {
 
   // 4. Render Side-by-Side Comparison Chart
   if (displayMode === 'both' || displayMode === 'chart') {
+    const chartId = `chart-${plant}-qual-compare`;
+    const isLine = state.chartTypes[chartId] === 'line';
     const categories = dataset.map(d => d.x);
     const series = selectedParams.map(p => ({
       name: `${p.shortLabel} (${p.unit})`,
@@ -1902,7 +2040,7 @@ function updateQualityCompareSection(plant, baseChartData) {
       series: series,
       chart: {
         height: 290,
-        type: 'bar',
+        type: isLine ? 'line' : 'bar',
         toolbar: { show: false }
       },
       colors: colors,
@@ -1918,16 +2056,17 @@ function updateQualityCompareSection(plant, baseChartData) {
       },
       dataLabels: {
         enabled: state.showDataLabels,
-        offsetY: -18,
+        offsetY: isLine ? -6 : -18,
         style: {
           fontSize: '9px',
           colors: ['#000000']
         }
       },
-      stroke: {
-        show: true,
-        width: 2,
-        colors: ['transparent']
+      stroke: isLine
+        ? { show: true, width: 3, curve: 'smooth' }
+        : { show: true, width: 2, colors: ['transparent'] },
+      markers: {
+        size: isLine ? 4 : 0
       },
       xaxis: {
         categories: categories
@@ -1963,7 +2102,7 @@ function updateQualityCompareSection(plant, baseChartData) {
         }
       }
     };
-    renderChart(`chart-${plant}-qual-compare`, chartOptions);
+    renderChart(chartId, chartOptions, state.chartTypes[chartId]);
   }
 }
 
