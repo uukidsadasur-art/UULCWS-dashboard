@@ -16,14 +16,14 @@
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <!-- CSS Stylesheets (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
   
   <script>
-    // Force purge old Service Worker caches (v1-v9) so updated CSS/JS load immediately
+    // Force purge old Service Worker caches (v1-v10) so updated CSS/JS load immediately
     if ('caches' in window) {
       caches.keys().then(function(keys) {
         keys.forEach(function(key) {
-          if (key !== 'uulcws-cache-v10') {
+          if (key !== 'uulcws-cache-v11') {
             caches.delete(key);
           }
         });
@@ -698,7 +698,7 @@
   <div id="toast-container" class="toast"></div>
 
   <!-- Javascript Logic Files (Cache-busted) -->
-  <script src="data.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="data.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
