@@ -382,6 +382,50 @@
             </div>
           </div>
 
+          <!-- WW Multi-Parameter Quality Comparison Table & Chart Card -->
+          <div class="chart-card quality-compare-card ww-compare-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3><i data-lucide="table-2" style="width:16px;height:16px;vertical-align:-2px;margin-right:4px;color:var(--color-ww);"></i>ตารางเรียกดูและเปรียบเทียบคุณภาพน้ำเสีย</h3>
+                <p>เลือกค่าคุณภาพน้ำของโรงบำบัดน้ำเสียที่ต้องการแสดงคู่กันในแต่ละวัน/ช่วงเวลา</p>
+              </div>
+              <div class="qual-view-controls">
+                <div class="qual-scope-tabs" data-plant="ww">
+                  <button class="qual-scope-btn active" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
+                  <button class="qual-scope-btn" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
+                </div>
+                <div class="qual-display-tabs" data-plant="ww">
+                  <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
+                  <button class="qual-display-btn" data-display="table">เฉพาะตาราง</button>
+                  <button class="qual-display-btn" data-display="chart">เฉพาะกราฟ</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Parameter Checkboxes for WW -->
+            <div class="qual-param-bar">
+              <span class="qual-param-label">เลือกค่าที่ต้องการดู:</span>
+              <div id="ww-qual-param-list" class="qual-param-list">
+                <!-- Populated by JS -->
+              </div>
+              <button id="btn-ww-qual-select-all" class="btn-qual-action">เลือกทั้งหมด</button>
+            </div>
+
+            <!-- Comparison Table Container -->
+            <div id="ww-qual-table-wrap" class="qual-table-container">
+              <table class="qual-compare-table" id="table-ww-qual">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+            </div>
+
+            <!-- Comparison Chart Container -->
+            <div id="ww-qual-chart-wrap" class="chart-wrapper" style="margin-top: 1rem;">
+              <div id="chart-ww-qual-compare"></div>
+            </div>
+          </div>
+
           <!-- WW COD Sump Card -->
           <div class="chart-card">
             <div class="chart-header">
@@ -439,6 +483,50 @@
             </div>
             <div class="chart-wrapper">
               <div id="chart-raw-intake"></div>
+            </div>
+          </div>
+
+          <!-- Water Multi-Parameter Quality Comparison Table & Chart Card -->
+          <div class="chart-card quality-compare-card water-compare-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <h3><i data-lucide="table-2" style="width:16px;height:16px;vertical-align:-2px;margin-right:4px;color:var(--color-water);"></i>ตารางเรียกดูและเปรียบเทียบคุณภาพน้ำประปา</h3>
+                <p>เลือกค่าคุณภาพน้ำของโรงผลิตน้ำประปาที่ต้องการแสดงคู่กันในแต่ละวัน/ช่วงเวลา</p>
+              </div>
+              <div class="qual-view-controls">
+                <div class="qual-scope-tabs" data-plant="water">
+                  <button class="qual-scope-btn active" data-scope="filter" title="แสดงตามวันที่หรือช่วงเวลาที่เลือกด้านบน">ตามวันที่เลือก</button>
+                  <button class="qual-scope-btn" data-scope="month" title="แสดงข้อมูลรายวันตลอดทั้งเดือนที่เลือก">รายวันทั้งเดือน</button>
+                </div>
+                <div class="qual-display-tabs" data-plant="water">
+                  <button class="qual-display-btn active" data-display="both">ตาราง + กราฟ</button>
+                  <button class="qual-display-btn" data-display="table">เฉพาะตาราง</button>
+                  <button class="qual-display-btn" data-display="chart">เฉพาะกราฟ</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Parameter Checkboxes for Water -->
+            <div class="qual-param-bar">
+              <span class="qual-param-label">เลือกค่าที่ต้องการดู:</span>
+              <div id="water-qual-param-list" class="qual-param-list">
+                <!-- Populated by JS -->
+              </div>
+              <button id="btn-water-qual-select-all" class="btn-qual-action">เลือกทั้งหมด</button>
+            </div>
+
+            <!-- Comparison Table Container -->
+            <div id="water-qual-table-wrap" class="qual-table-container">
+              <table class="qual-compare-table" id="table-water-qual">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+            </div>
+
+            <!-- Comparison Chart Container -->
+            <div id="water-qual-chart-wrap" class="chart-wrapper" style="margin-top: 1rem;">
+              <div id="chart-water-qual-compare"></div>
             </div>
           </div>
 
